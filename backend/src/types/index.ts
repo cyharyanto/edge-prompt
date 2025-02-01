@@ -29,4 +29,33 @@ export interface EvaluationState {
   validationStages: ValidationResult[];
   finalScore?: number;
   status: 'pending' | 'completed' | 'review';
+}
+
+export interface MaterialSource {
+  type: string;
+  content: string;
+  metadata: {
+    title?: string;
+    subject?: string;
+    grade?: string;
+    chapter?: string;
+    [key: string]: any;
+  };
+}
+
+export interface ContentTemplate {
+  pattern: string;
+  constraints: string[];
+  source: MaterialSource;
+  targetGrade: string;
+  subject: string;
+  learningObjectives: string[];
+}
+
+export interface AnswerSpace {
+  type: 'essay' | 'short-answer' | 'explanation';
+  minLength?: number;
+  maxLength?: number;
+  requiredConcepts?: string[];
+  prohibitedContent?: string[];
 } 

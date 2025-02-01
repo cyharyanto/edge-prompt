@@ -50,4 +50,4 @@ frontend/*.log
 
 # Misc
 .cache/
-.temp/ 
+.temp/ backend/uploads/*

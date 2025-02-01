@@ -35,16 +35,33 @@ EOF
     fi
 }
 
-# Create a cleanup function
+# Store process IDs
+BACKEND_PID=""
+FRONTEND_PID=""
+
+# Cleanup function
 cleanup() {
     echo "Shutting down servers..."
-    kill $(lsof -t -i:3000) 2>/dev/null # Kill frontend
-    kill $(lsof -t -i:3001) 2>/dev/null # Kill backend
+    
+    # Kill backend if running
+    if [ ! -z "$BACKEND_PID" ]; then
+        kill $BACKEND_PID 2>/dev/null
+    fi
+    
+    # Kill frontend if running
+    if [ ! -z "$FRONTEND_PID" ]; then
+        kill $FRONTEND_PID 2>/dev/null
+    fi
+    
+    # Kill any remaining processes on the ports
+    kill $(lsof -t -i:3000) 2>/dev/null
+    kill $(lsof -t -i:3001) 2>/dev/null
+    
     exit 0
 }
 
-# Set up trap for cleanup on script termination
-trap cleanup SIGINT SIGTERM
+# Set up trap for cleanup
+trap cleanup SIGINT SIGTERM EXIT
 
 # Check LM Studio before proceeding
 if ! check_lm_studio; then
@@ -65,12 +82,30 @@ npm install
 # Start servers
 echo "Starting servers..."
 
-# Start backend in background and save PID
+# Start backend
 cd ../backend
 npm run dev > backend.log 2>&1 &
 BACKEND_PID=$!
 
-# Start frontend in background and save PID
+# Wait for backend to start and check for errors
+sleep 5
+if ! ps -p $BACKEND_PID > /dev/null; then
+    echo "Backend failed to start. Check backend.log for errors:"
+    cat backend.log
+    cleanup
+    exit 1
+fi
+
+# Check if backend is responding
+if ! curl -s http://localhost:3001/api/health > /dev/null; then
+    echo "Backend is not responding. Check backend.log for errors:"
+    cat backend.log
+    cleanup
+    exit 1
+fi
+
+# Only proceed with frontend if backend is running
+echo "Backend started successfully. Installing frontend dependencies..."
 cd ../frontend
 npm start > frontend.log 2>&1 &
 FRONTEND_PID=$!
@@ -78,14 +113,11 @@ FRONTEND_PID=$!
 # Function to follow logs
 follow_logs() {
     echo "Following logs... (Press Ctrl+C to stop servers)"
-    echo "Backend log:"
-    tail -f ../backend/backend.log &
-    echo "Frontend log:"
-    tail -f frontend.log
+    tail -f ../backend/backend.log frontend.log
 }
 
-# Follow logs and wait for Ctrl+C
+# Follow logs and wait
 follow_logs
 
-# Keep script running until Ctrl+C
+# Wait for Ctrl+C
 wait 

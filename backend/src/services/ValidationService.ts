@@ -1,5 +1,5 @@
-import type { ValidationRule, ValidationResult } from '../types';
-import { LMStudioService } from './LMStudioService';
+import type { ValidationRule, ValidationResult } from '../types/index.js';
+import { LMStudioService } from './LMStudioService.js';
 
 export class ValidationService {
   private lmStudio: LMStudioService;

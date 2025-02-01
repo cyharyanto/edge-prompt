@@ -1,159 +1,122 @@
 # EdgePrompt
 
-EdgePrompt is a prompt engineering framework that implements pragmatic guardrails for Large Language Models (LLMs) in K-12 educational settings through structured prompting. The system enables offline-capable content safety controls, particularly designed for Indonesia's Underdeveloped, Frontier, and Outermost (3T) regions.
+EdgePrompt is a framework for implementing pragmatic guardrails for Large Language Models (LLMs) in K-12 educational settings through structured prompting inspired by neuro-symbolic principles.
 
 ## Features
 
-- 🛡️ **Content Safety Controls**: Implements structured prompt-based controls enforcing content boundaries
-- 🔄 **Multi-stage Validation**: Sequential prompt-based checks for content verification
-- 💻 **Edge Deployment**: Optimized for resource-constrained environments
-- 🌐 **Offline Capability**: Functions without persistent internet connectivity
-- 📚 **Educational Focus**: Specifically designed for K-12 assessment systems
+- 🚀 Edge-first architecture for offline LLM usage
+- 📚 Support for multiple file formats (PDF, Word, Markdown, Text)
+- 🌍 Multi-language support with automatic language detection
+- 🎯 Focus area-driven content analysis
+- 🔒 Structured content validation
+- 📝 Automated question generation
+- ✅ Built-in assessment capabilities
 
-## Architecture
+## Getting Started
 
-The system implements three main components as described in the research paper:
+### Prerequisites
 
-1. **Teacher-Driven Content Generation**
-   - Domain-constrained content templates
-   - Answer space specification
-   - Formal learning objective mapping
+- Node.js 18+
+- LM Studio running locally
+- TypeScript 5.0+
 
-2. **Student Answers Evaluation**
-   - Edge validation protocol
-   - Multi-stage response validation
-   - Boundary enforcement
-
-3. **Teacher Verification Protocol**
-   - Response analysis
-   - System adaptation
-   - Calibration tracking
-
-## Prerequisites
-
-- Node.js (v14 or higher)
-- LM Studio (running on port 1234)
-- Git
-
-## Quick Start
+### Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/edge-prompt.git
+git clone https://github.com/build-club-ai-indonesia/edge-prompt
 cd edge-prompt
 ```
 
-2. Start LM Studio and ensure it's running on http://localhost:1234
-
-3. Run the setup script:
+2. Install dependencies:
 ```bash
-chmod +x run.sh
-./run.sh
-```
-
-The script will:
-- Install dependencies for both frontend and backend
-- Start the development servers
-- Check LM Studio connectivity
-
-## Manual Setup
-
-If you prefer manual setup:
-
-### Backend
-```bash
+# Install backend dependencies
 cd backend
 npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+3. Start LM Studio and load your preferred model
+
+4. Start the development servers:
+```bash
+# Start backend (from backend directory)
+npm run dev
+
+# Start frontend (from frontend directory)
 npm run dev
 ```
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm start
-```
+## Usage
 
-## Project Structure
+1. Upload Teaching Material
+   - Select a file (PDF, Word, Markdown, or Text)
+   - Specify the focus area for content analysis
+   - Optionally enable source language matching for generated content
+   - Add optional metadata (title, subject, grade level, chapter)
+
+2. Content Analysis
+   - Automatic extraction of learning objectives
+   - Generation of question templates
+   - Word count analysis
+
+3. Question Generation
+   - Select from suggested templates
+   - Add custom constraints
+   - Set validation rules
+   - Generate questions with context awareness
+
+4. Student Interface
+   - Answer generated questions
+   - Receive instant feedback
+   - View scoring and explanations
+
+## Architecture
 
 ```
 edge-prompt/
-├── frontend/                 # React application
+├── backend/
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── teacher/     # Teacher interface components
-│   │   │   └── student/     # Student interface components
-│   │   └── App.tsx          # Main application component
-│   └── package.json
-│
-├── backend/                  # Express server
-│   ├── src/
-│   │   ├── services/        # Core services
-│   │   │   ├── ValidationService.ts
-│   │   │   └── LMStudioService.ts
-│   │   └── index.ts         # Server entry point
-│   └── package.json
-│
-└── run.sh                    # Setup and run script
+│   │   ├── services/
+│   │   │   ├── LMStudioService.ts    # LLM integration
+│   │   │   ├── MaterialProcessor.ts   # Content processing
+│   │   │   └── ValidationService.ts   # Answer validation
+│   │   └── types/
+│   │       └── index.ts              # Shared types
+└── frontend/
+    └── src/
+        └── components/
+            └── teacher/
+                ├── ContentGenerator.tsx   # Question generation
+                └── MaterialUploader.tsx   # File handling
 ```
 
-## API Endpoints
+## Features in Detail
 
-### Content Generation
-```http
-POST /api/generate
-Content-Type: application/json
+### Content Processing
+- Automatic text extraction from multiple file formats
+- Smart content truncation for LLM context limits
+- Focus area-driven learning objective extraction
+- Language-aware content generation
 
-{
-  "prompt": "string",
-  "constraints": "string[]"
-}
-```
+### Question Generation
+- Template-based question creation
+- Constraint-driven generation
+- Context-aware question formulation
+- Multi-language support
 
-### Response Validation
-```http
-POST /api/validate
-Content-Type: application/json
-
-{
-  "question": "string",
-  "answer": "string",
-  "rubric": "string"
-}
-```
-
-## Development
-
-### Environment Variables
-
-Create a `.env` file in the backend directory:
-```env
-PORT=3001
-LM_STUDIO_URL=http://localhost:1234
-```
-
-### Running Tests
-```bash
-# Backend tests
-cd backend
-npm test
-
-# Frontend tests
-cd frontend
-npm test
-```
+### Validation
+- Structured answer validation
+- Scoring parameter customization
+- Detailed feedback generation
+- Language-matched response evaluation
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## Research Paper
-
-This implementation is based on the research paper "EdgePrompt: Engineering Guardrail Techniques for Offline LLMs in K-12 Educational Settings". The paper outlines the theoretical framework and validation strategies implemented in this project.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
 
@@ -161,13 +124,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- BuildClub.ai as the training campus for AI learners, experts, builders
-- Indonesian Ministry of Education for providing educational resources
-- Contributors to the research paper and implementation
+- [BuildClub.ai](https://www.buildclub.ai/) - Training campus for AI learners
+- [LM Studio](https://lmstudio.ai/) - Local LLM runtime
+- Contributors and maintainers
 
-## Contact
+## Research
 
-- Riza Alaudin Syah - alaudinsyah@graduate.utm.my
-- Christoforus Yoga Haryanto - cyharyanto@zipthought.com.au
-
-Project Link: [https://github.com/cyharyanto/edge-prompt](https://github.com/cyharyanto/edge-prompt)
+For more details about the methodology and research behind EdgePrompt, please refer to our paper:
+[EdgePrompt: Engineering Guardrails for Offline LLMs in K-12 Educational Settings](https://github.com/build-club-ai-indonesia/edge-prompt/blob/main/paper.pdf)

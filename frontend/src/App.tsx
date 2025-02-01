@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ContentGenerator } from './components/teacher/ContentGenerator';
-import { Template, ValidationRule } from '../../backend/src/types';
+import { ProjectPanel } from './components/project/ProjectPanel';
+import { ProjectProvider, useProject } from './contexts/ProjectContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
 
-function App() {
-  const handleGenerate = (template: Template, rules: ValidationRule) => {
-    console.log('Generated:', { template, rules });
-  };
+// Main content wrapper that uses the project context
+const MainContent: React.FC = () => {
+  const { activeProject } = useProject();
+  const [showTemplates, setShowTemplates] = useState(false);
 
   return (
     <div className="container-fluid">
@@ -14,14 +17,77 @@ function App() {
           <h1 className="h4 mb-0">
             <i className="bi bi-braces"></i> EdgePrompt
           </h1>
-          <span className="badge bg-success">Connected</span>
+          {activeProject && (
+            <div className="badge bg-light text-primary">
+              {activeProject.name} ({activeProject.modelName})
+            </div>
+          )}
         </div>
       </header>
 
-      <main className="container">
-        <ContentGenerator onGenerate={handleGenerate} />
-      </main>
+      <div className="container-fluid">
+        <div className="row">
+          {/* Project Panel */}
+          <div className="col-md-3">
+            <ProjectPanel />
+          </div>
+
+          {/* Main Content */}
+          <div className="col-md-9">
+            {activeProject ? (
+              <div>
+                <ul className="nav nav-tabs mb-4">
+                  <li className="nav-item">
+                    <button 
+                      className={`nav-link ${!showTemplates ? 'active' : ''}`}
+                      onClick={() => setShowTemplates(false)}
+                    >
+                      <i className="bi bi-file-text me-1"></i>
+                      Content Generator
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button 
+                      className={`nav-link ${showTemplates ? 'active' : ''}`}
+                      onClick={() => setShowTemplates(true)}
+                    >
+                      <i className="bi bi-file-earmark-text me-1"></i>
+                      Prompt Templates
+                    </button>
+                  </li>
+                </ul>
+
+                {showTemplates ? (
+                  <PromptTemplateManager />
+                ) : (
+                  <ContentGenerator 
+                    onGenerate={(template, rules) => {
+                      console.log('Generated:', { template, rules });
+                    }}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="alert alert-info">
+                <i className="bi bi-info-circle me-2"></i>
+                Please select or create a project to begin
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
+  );
+};
+
+// Wrap the app with ProjectProvider
+function App() {
+  return (
+    <ErrorBoundary>
+      <ProjectProvider>
+        <MainContent />
+      </ProjectProvider>
+    </ErrorBoundary>
   );
 }
 

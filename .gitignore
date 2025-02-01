@@ -1,3 +1,10 @@
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+research.db
+research.db-*
+
 # Dependencies
 node_modules/
 /.pnp

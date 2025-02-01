@@ -10,6 +10,7 @@ import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
 import { MaterialSource } from './types/index.js';
 import fs from 'fs/promises';
+import { DatabaseService } from './services/DatabaseService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,6 +26,7 @@ mkdirSync(uploadsDir, { recursive: true });
 const lmStudio = new LMStudioService();
 const validator = new ValidationService(lmStudio);
 const materialProcessor = new MaterialProcessor(lmStudio);
+const db = new DatabaseService();
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -206,6 +208,71 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
       error: 'Failed to process uploaded material',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
+  }
+});
+
+// Project endpoints
+app.get('/api/projects', async (_req, res): Promise<void> => {
+  try {
+    const projects = await db.getProjects();
+    res.json(projects);
+  } catch (error) {
+    console.error('Failed to get projects:', error);
+    res.status(500).json({ error: 'Failed to get projects' });
+  }
+});
+
+app.post('/api/projects', async (req, res): Promise<void> => {
+  try {
+    const projectId = await db.createProject(req.body);
+    const project = await db.getProject(projectId);
+    res.json(project);
+  } catch (error) {
+    console.error('Failed to create project:', error);
+    res.status(500).json({ error: 'Failed to create project' });
+  }
+});
+
+app.put('/api/projects/:id', async (req, res): Promise<void> => {
+  try {
+    await db.updateProject(req.params.id, req.body);
+    const project = await db.getProject(req.params.id);
+    res.json(project);
+  } catch (error) {
+    console.error('Failed to update project:', error);
+    res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+app.delete('/api/projects/:id', async (req, res): Promise<void> => {
+  try {
+    await db.deleteProject(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
+// Prompt template endpoints
+app.get('/api/prompt-templates', async (_req, res): Promise<void> => {
+  try {
+    const templates = await db.getPromptTemplates();
+    res.json(templates);
+  } catch (error) {
+    console.error('Failed to get prompt templates:', error);
+    res.status(500).json({ error: 'Failed to get prompt templates' });
+  }
+});
+
+app.post('/api/prompt-templates', async (req, res): Promise<void> => {
+  try {
+    const templateId = await db.createPromptTemplate(req.body);
+    const template = await db.getPromptTemplate(templateId);
+    res.json(template);
+  } catch (error) {
+    console.error('Failed to create prompt template:', error);
+    res.status(500).json({ error: 'Failed to create prompt template' });
   }
 });
 

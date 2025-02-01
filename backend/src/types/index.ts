@@ -58,4 +58,28 @@ export interface AnswerSpace {
   maxLength?: number;
   requiredConcepts?: string[];
   prohibitedContent?: string[];
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  modelName: string;
+  promptTemplateId: string;
+  configuration: {
+    language: string;
+    gradeLevel: string;
+    subject: string;
+  };
+  createdAt?: string;
+}
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  version: string;
+  type: 'question_generation' | 'validation' | 'objective_extraction';
+  content: string;
+  description?: string;
+  createdAt?: string;
 } 

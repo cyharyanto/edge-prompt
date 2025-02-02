@@ -1,3 +1,7 @@
+export * from '@edge-prompt/common/types/index.js';
+
+// Any frontend-specific types would go here
+
 export interface Project {
   id: string;
   name: string;

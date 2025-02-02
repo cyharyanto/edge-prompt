@@ -18,8 +18,15 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@edge-prompt/common/*": ["../common/src/*"]
+    }
   },
+  "references": [
+    { "path": "../common" }
+  ],
   "include": [
     "src"
   ]

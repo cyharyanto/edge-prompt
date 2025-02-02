@@ -70,15 +70,15 @@ export const ProjectView: React.FC<Props> = ({ project, onUpdate }) => {
       <div className="list-group list-group-flush">
         <div className="list-group-item">
           <div className="row">
-            <div className="col-md-4">
+            <div className="col-xxl-4 mb-3">
               <small className="text-muted d-block">Model</small>
               <strong>{project.modelName}</strong>
             </div>
-            <div className="col-md-4">
+            <div className="col-xxl-4 mb-3">
               <small className="text-muted d-block">Language</small>
               <strong>{configuration.language}</strong>
             </div>
-            <div className="col-md-4">
+            <div className="col-xxl-4 mb-3">
               <small className="text-muted d-block">Subject</small>
               <strong>{configuration.subject}</strong>
             </div>
@@ -87,11 +87,11 @@ export const ProjectView: React.FC<Props> = ({ project, onUpdate }) => {
 
         <div className="list-group-item">
           <div className="row">
-            <div className="col-md-6">
+            <div className="col-xxl-6 mb-3">
               <small className="text-muted d-block">Grade Level</small>
               <strong>{configuration.gradeLevel}</strong>
             </div>
-            <div className="col-md-6">
+            <div className="col-xxl-6 mb-3">
               <small className="text-muted d-block">Prompt Template</small>
               {currentTemplate ? (
                 <div>

@@ -12,6 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@edge-prompt/common": "file:../common",
     "axios": "^1.6.7",
     "better-sqlite3": "^9.6.0",
     "cors": "^2.8.5",

@@ -7,15 +7,15 @@ research.db-*
 
 # Dependencies
 node_modules/
-/.pnp
+.pnp/
 .pnp.js
 
 # Testing
-/coverage
+coverage/
 
 # Production
-/build
-/dist
+build/
+dist/
 
 # Environment files
 .env
@@ -48,6 +48,8 @@ backend/dist/
 backend/node_modules/
 backend/.env
 backend/*.log
+backend/uploads/*
+!backend/uploads/.gitkeep
 
 # Frontend specific
 frontend/build/
@@ -55,6 +57,10 @@ frontend/node_modules/
 frontend/.env
 frontend/*.log
 
+# Common specific
+common/dist/
+common/node_modules/
+
 # Misc
 .cache/
-.temp/ backend/uploads/*
+.temp/

@@ -1,61 +1,25 @@
 #!/bin/bash
 
-# Function to get Windows host IP
-get_windows_host() {
-    # Get Windows host IP from WSL2
-    ip route show | grep -i default | awk '{ print $3}'
-}
-
-# Function to check LM Studio availability
-check_lm_studio() {
-    echo "Checking LM Studio connection..."
-    WINDOWS_HOST=$(get_windows_host)
-    echo "Using Windows host: $WINDOWS_HOST"
-    
-    response=$(curl -s -o /dev/null -w "%{http_code}" "http://${WINDOWS_HOST}:1234/v1/models")
-    
-    if [ "$response" = "200" ]; then
-        echo "LM Studio is running and accessible"
-        # Create/update .env file with correct host
-        cat > backend/.env << EOF
-# Windows host IP as seen from WSL2
-LM_STUDIO_URL=http://${WINDOWS_HOST}:1234
-PORT=3001
-EOF
-        return 0
-    else
-        echo "Error: Cannot connect to LM Studio"
-        echo "Response code: $response"
-        echo "Please ensure:"
-        echo "1. LM Studio is running on Windows"
-        echo "2. It's listening on port 1234"
-        echo "3. A model is loaded in LM Studio"
-        echo "4. Windows Defender is not blocking the connection"
-        return 1
-    fi
-}
-
 # Store process IDs
-BACKEND_PID=""
-FRONTEND_PID=""
+MAIN_PID=""
 
 # Cleanup function
 cleanup() {
-    echo "Shutting down servers..."
+    echo -e "\nShutting down servers..."
     
-    # Kill backend if running
-    if [ ! -z "$BACKEND_PID" ]; then
-        kill $BACKEND_PID 2>/dev/null
+    # Kill development processes
+    pkill -f "tsx watch"
+    pkill -f "react-scripts start"
+    pkill -f "tsc -w"
+    
+    # Kill main process if exists
+    if [ ! -z "$MAIN_PID" ]; then
+        kill $MAIN_PID 2>/dev/null
     fi
     
-    # Kill frontend if running
-    if [ ! -z "$FRONTEND_PID" ]; then
-        kill $FRONTEND_PID 2>/dev/null
-    fi
-    
-    # Kill any remaining processes on the ports
-    kill $(lsof -t -i:3000) 2>/dev/null
-    kill $(lsof -t -i:3001) 2>/dev/null
+    # Force kill any remaining processes on these ports
+    fuser -k 3000/tcp 2>/dev/null
+    fuser -k 3001/tcp 2>/dev/null
     
     exit 0
 }
@@ -63,61 +27,29 @@ cleanup() {
 # Set up trap for cleanup
 trap cleanup SIGINT SIGTERM EXIT
 
-# Check LM Studio before proceeding
-if ! check_lm_studio; then
-    exit 1
+# Get Windows host IP from WSL2 (if running in WSL)
+if grep -qi microsoft /proc/version; then
+    WINDOWS_HOST=$(ip route show | grep -i default | awk '{ print $3}')
+    echo "Windows host IP: $WINDOWS_HOST"
+    
+    # Update .env with Windows host IP
+    sed -i "s|LM_STUDIO_URL=.*|LM_STUDIO_URL=http://$WINDOWS_HOST:1234|g" backend/.env
 fi
 
-# Install backend dependencies
-cd backend
-echo "Installing backend dependencies..."
-npm install
-npm run build
-
-# Install frontend dependencies
-cd ../frontend
-echo "Installing frontend dependencies..."
+# Install dependencies and build packages
+echo "Installing dependencies..."
 npm install
 
-# Start servers
-echo "Starting servers..."
+# Build common package first
+echo "Building common package..."
+npm run build:common
 
-# Start backend
-cd ../backend
-npm run dev > backend.log 2>&1 &
-BACKEND_PID=$!
+# Start development servers with proper cleanup
+echo "Starting development servers..."
+npm run dev &
 
-# Wait for backend to start and check for errors
-sleep 5
-if ! ps -p $BACKEND_PID > /dev/null; then
-    echo "Backend failed to start. Check backend.log for errors:"
-    cat backend.log
-    cleanup
-    exit 1
-fi
-
-# Check if backend is responding
-if ! curl -s http://localhost:3001/api/health > /dev/null; then
-    echo "Backend is not responding. Check backend.log for errors:"
-    cat backend.log
-    cleanup
-    exit 1
-fi
-
-# Only proceed with frontend if backend is running
-echo "Backend started successfully. Installing frontend dependencies..."
-cd ../frontend
-npm start > frontend.log 2>&1 &
-FRONTEND_PID=$!
-
-# Function to follow logs
-follow_logs() {
-    echo "Following logs... (Press Ctrl+C to stop servers)"
-    tail -f ../backend/backend.log frontend.log
-}
-
-# Follow logs and wait
-follow_logs
+# Store the main process PID
+MAIN_PID=$!
 
 # Wait for Ctrl+C
-wait 
+wait $MAIN_PID 

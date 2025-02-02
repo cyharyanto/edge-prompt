@@ -23,9 +23,13 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "pdfjs-dist/build/pdf.worker.js": ["./node_modules/pdfjs-dist/build/pdf.worker.js"]
+      "pdfjs-dist/build/pdf.worker.js": ["./node_modules/pdfjs-dist/build/pdf.worker.js"],
+      "@edge-prompt/common/*": ["../common/src/*"]
     }
   },
+  "references": [
+    { "path": "../common" }
+  ],
   "exclude": ["node_modules"],
   "include": ["./src/**/*.ts"]
 } 

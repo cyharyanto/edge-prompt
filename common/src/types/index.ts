@@ -1,5 +1,3 @@
-export * from '@edge-prompt/common/types/index.js';
-
 export interface Template {
   pattern: string;
   constraints: string[];
@@ -24,15 +22,6 @@ export interface ValidationResult {
   feedback: string;
 }
 
-export interface EvaluationState {
-  questionId: string;
-  studentId: string;
-  response: string;
-  validationStages: ValidationResult[];
-  finalScore?: number;
-  status: 'pending' | 'completed' | 'review';
-}
-
 export interface MaterialSource {
   type: string;
   content: string;
@@ -43,23 +32,6 @@ export interface MaterialSource {
     chapter?: string;
     [key: string]: any;
   };
-}
-
-export interface ContentTemplate {
-  pattern: string;
-  constraints: string[];
-  source: MaterialSource;
-  targetGrade: string;
-  subject: string;
-  learningObjectives: string[];
-}
-
-export interface AnswerSpace {
-  type: 'essay' | 'short-answer' | 'explanation';
-  minLength?: number;
-  maxLength?: number;
-  requiredConcepts?: string[];
-  prohibitedContent?: string[];
 }
 
 export interface Project {

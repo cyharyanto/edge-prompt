@@ -28,12 +28,12 @@ const MainContent: React.FC = () => {
       <div className="container-fluid">
         <div className="row">
           {/* Project Panel */}
-          <div className="col-md-3">
+          <div className="col-xxl-3 mb-4">
             <ProjectPanel />
           </div>
 
           {/* Main Content */}
-          <div className="col-md-9">
+          <div className="col-xxl-9">
             {activeProject ? (
               <div>
                 <ul className="nav nav-tabs mb-4">

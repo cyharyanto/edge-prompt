@@ -9,7 +9,9 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "migrate": "tsx src/db/migrate.ts",
-    "test": "jest"
+    "test": "NODE_ENV=test mocha --require tsx/cjs 'src/**/*.test.ts' --file src/test/setup.ts",
+    "test:watch": "mocha --watch",
+    "test:storage": "mocha src/services/StorageService.test.ts"
   },
   "dependencies": {
     "@edge-prompt/common": "file:../common",
@@ -32,6 +34,10 @@
     "@types/pdfjs-dist": "^2.10.378",
     "@types/uuid": "^9.0.8",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "@types/chai": "^4.3.5",
+    "@types/mocha": "^10.0.1"
   }
 }

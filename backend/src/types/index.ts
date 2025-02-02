@@ -86,4 +86,21 @@ export interface PromptTemplate {
   content: string;
   description?: string;
   createdAt?: string;
+}
+
+export type MaterialStatus = 'pending' | 'processing' | 'completed' | 'error';
+
+export interface Material {
+  id: string;
+  projectId: string;
+  projectName: string;
+  title: string;
+  content: string;
+  focusArea: string;
+  filePath?: string;
+  fileType?: string;
+  fileSize?: number;
+  status: MaterialStatus;
+  metadata?: any;
+  createdAt: string;
 } 

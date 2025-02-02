@@ -1,24 +1,33 @@
-# SQLite database files
+# Root .gitignore
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Uploaded files
+uploads/
+test-uploads/
 *.db
-*.db-shm
-*.db-wal
+*.db-*
 research.db
-research.db-*
+research.db-shm
+research.db-wal
+
+# Build artifacts
+build/
+*.tsbuildinfo
 
 # Dependencies
-node_modules/
 .pnp/
 .pnp.js
 
-# Testing
-coverage/
-
-# Production
-build/
-dist/
-
 # Environment files
-.env
 .env.local
 .env.development.local
 .env.test.local
@@ -37,7 +46,6 @@ yarn-error.log*
 *.swo
 
 # OS
-.DS_Store
 Thumbs.db
 
 # TypeScript

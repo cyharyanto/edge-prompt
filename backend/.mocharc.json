@@ -1,0 +1,6 @@
+{
+  "require": ["tsx/cjs", "src/test/setup.ts"],
+  "extension": ["ts"],
+  "watch-files": ["src/**/*.ts"],
+  "timeout": 10000
+} 

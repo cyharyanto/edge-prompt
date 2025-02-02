@@ -1,4 +1,5 @@
 import { DatabaseService } from '../services/DatabaseService.js';
+import { StorageService } from '../services/StorageService.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -11,11 +12,17 @@ async function migrate() {
   
   try {
     const db = new DatabaseService();
+    const storage = new StorageService();
     const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
     
+    // Initialize storage
+    await storage.initialize();
+
     // Run migrations in a transaction
     await db.transaction(async () => {
-      db.exec(schema);
+      // Create tables if they don't exist
+      await db.exec(schema);
+      console.log('Schema initialized');
 
       // Add default prompt template if none exists
       const templates = await db.getPromptTemplates();

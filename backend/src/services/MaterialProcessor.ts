@@ -3,36 +3,129 @@ import { LMStudioService } from './LMStudioService.js';
 import mammoth from 'mammoth';
 import fs from 'fs/promises';
 import { default as pdfjsLib } from 'pdfjs-dist/legacy/build/pdf.js';
+import { DatabaseService } from './DatabaseService.js';
+import { StorageService } from './StorageService.js';
+import { Material, MaterialStatus } from '../types/index.js';
+import { stat } from 'fs/promises';
+import { extname } from 'path';
 
 export class MaterialProcessor {
   private lmStudio: LMStudioService;
+  private db: DatabaseService;
+  private storage: StorageService;
   private MAX_TOKENS = 16000; // Conservative limit for context
 
-  constructor(lmStudio: LMStudioService) {
+  constructor(
+    lmStudio: LMStudioService,
+    db?: DatabaseService,
+    storage?: StorageService
+  ) {
     this.lmStudio = lmStudio;
+    this.db = db || new DatabaseService();
+    this.storage = storage || new StorageService();
+  }
+
+  async processMaterial(
+    source: MaterialSource,
+    projectId: string
+  ): Promise<Material> {
+    let materialId: string | undefined;
+    
+    try {
+      // Create material record in pending state
+      materialId = await this.db.createMaterial({
+        projectId,
+        title: source.metadata.title || 'Untitled Material',
+        content: '',  // Will be updated after processing
+        focusArea: source.metadata.focusArea || '',
+        metadata: source.metadata
+      });
+
+      // Update status to processing
+      await this.db.updateMaterialStatus(materialId, 'processing');
+
+      // Handle file-based sources
+      let filePath: string | undefined;
+      let fileSize: number | undefined;
+      let fileType: string | undefined;
+
+      if (typeof source.content === 'string' && source.content.startsWith('/')) {
+        // Content is a file path
+        const stats = await stat(source.content);
+        fileSize = stats.size;
+        fileType = extname(source.content);
+
+        // Validate file
+        if (!this.storage.validateFileSize(fileSize)) {
+          throw new Error('File size exceeds limit');
+        }
+        if (!this.storage.validateFileType(source.content)) {
+          throw new Error('File type not supported');
+        }
+
+        // Save original file
+        filePath = await this.storage.saveMaterialFile(
+          source.content,
+          projectId,
+          materialId
+        );
+      }
+
+      // Extract content
+      const content = await this.extractContent({
+        ...source,
+        content: filePath || source.content
+      });
+
+      // Update material with content and file info
+      await this.db.updateMaterialFile(
+        materialId,
+        content,
+        filePath || null,
+        fileType || null,
+        fileSize || null,
+        'completed'
+      );
+
+      return await this.db.getMaterial(materialId);
+    } catch (error) {
+      // Update status to error if material was created
+      if (materialId) {
+        await this.db.updateMaterialStatus(materialId, 'error');
+      }
+      throw error;
+    }
   }
 
   async extractContent(source: MaterialSource): Promise<string> {
-    // Normalize file extension
-    const type = source.type.toLowerCase().replace('.', '');
-    
-    switch (type) {
-      case 'txt':
-      case 'text':
-        return source.content as string;
-      case 'pdf':
-        return await this.processPDF(source.content as string);
-      case 'doc':
-      case 'docx':
-        return await this.processWord(source.content as string);
-      case 'md':
-      case 'markdown':
-        return await this.processMarkdown(source.content as string);
-      case 'url':
-        return await this.fetchURL(source.content as string);
-      default:
-        console.error('Unsupported file type:', type);
-        throw new Error(`Unsupported material type: ${type}`);
+    try {
+      // Normalize file extension
+      const type = source.type.toLowerCase().replace('.', '');
+      
+      switch (type) {
+        case 'txt':
+        case 'text':
+          // If content is a file path, read the file
+          if (typeof source.content === 'string' && source.content.startsWith('/')) {
+            return await fs.readFile(source.content, 'utf8');
+          }
+          return source.content as string;
+        case 'pdf':
+          return await this.processPDF(source.content as string);
+        case 'doc':
+        case 'docx':
+          return await this.processWord(source.content as string);
+        case 'md':
+        case 'markdown':
+          return await this.processMarkdown(source.content as string);
+        case 'url':
+          return await this.fetchURL(source.content as string);
+        default:
+          throw new Error(`Unsupported material type: ${type}`);
+      }
+    } catch (error) {
+      console.error('Content extraction error:', error);
+      throw error; // Preserve original error
     }
   }
 

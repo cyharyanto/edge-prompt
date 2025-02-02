@@ -1,0 +1,29 @@
+# Backend specific
+/uploads/
+/test-uploads/
+*.db
+*.db-*
+research.db
+research.db-shm
+research.db-wal
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+/dist/
+/build/
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store 

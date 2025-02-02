@@ -27,6 +27,10 @@ CREATE TABLE IF NOT EXISTS materials (
   content TEXT NOT NULL,
   focus_area TEXT NOT NULL,
   metadata JSON,
+  file_path TEXT,
+  file_type TEXT,
+  file_size INTEGER,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'error')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(project_id) REFERENCES projects(id)
 );
@@ -57,4 +61,5 @@ CREATE TABLE IF NOT EXISTS responses (
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_materials_project ON materials(project_id);
 CREATE INDEX IF NOT EXISTS idx_questions_material ON generated_questions(material_id);
-CREATE INDEX IF NOT EXISTS idx_responses_question ON responses(question_id); 
+CREATE INDEX IF NOT EXISTS idx_responses_question ON responses(question_id);
+CREATE INDEX IF NOT EXISTS idx_materials_status ON materials(status); 

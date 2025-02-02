@@ -1,0 +1,32 @@
+# Frontend specific
+/dist/
+/build/
+/.next/
+/.nuxt/
+/out/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+/node_modules/
+
+# Cache
+.cache/
+.npm/
+
+# Build artifacts
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store 

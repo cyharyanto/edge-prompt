@@ -4,11 +4,12 @@ import { ProjectPanel } from './components/project/ProjectPanel';
 import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
+import PromptEngineeringTool from './components/tools/PromptEngineeringTool';
 
 // Main content wrapper that uses the project context
 const MainContent: React.FC = () => {
   const { activeProject } = useProject();
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [activeTab, setActiveTab] = useState<'generator' | 'templates' | 'promptTools'>('generator');
 
   return (
     <div className="container-fluid">
@@ -39,8 +40,8 @@ const MainContent: React.FC = () => {
                 <ul className="nav nav-tabs mb-4">
                   <li className="nav-item">
                     <button 
-                      className={`nav-link ${!showTemplates ? 'active' : ''}`}
-                      onClick={() => setShowTemplates(false)}
+                      className={`nav-link ${activeTab === 'generator' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('generator')}
                     >
                       <i className="bi bi-file-text me-1"></i>
                       Content Generator
@@ -48,23 +49,36 @@ const MainContent: React.FC = () => {
                   </li>
                   <li className="nav-item">
                     <button 
-                      className={`nav-link ${showTemplates ? 'active' : ''}`}
-                      onClick={() => setShowTemplates(true)}
+                      className={`nav-link ${activeTab === 'templates' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('templates')}
                     >
                       <i className="bi bi-file-earmark-text me-1"></i>
                       Prompt Templates
                     </button>
                   </li>
+                  <li className="nav-item">
+                    <button 
+                      className={`nav-link ${activeTab === 'promptTools' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('promptTools')}
+                    >
+                      <i className="bi bi-tools me-1"></i>
+                      Prompt Engineering Tools
+                    </button>
+                  </li>
                 </ul>
 
-                {showTemplates ? (
-                  <PromptTemplateManager />
-                ) : (
+                {activeTab === 'generator' && (
                   <ContentGenerator 
                     onGenerate={(template, rules) => {
                       console.log('Generated:', { template, rules });
                     }}
                   />
+                )}
+                {activeTab === 'templates' && (
+                  <PromptTemplateManager />
+                )}
+                {activeTab === 'promptTools' && (
+                  <PromptEngineeringTool />
                 )}
               </div>
             ) : (

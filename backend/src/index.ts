@@ -11,6 +11,7 @@ import { mkdirSync } from 'fs';
 import { MaterialSource } from './types/index.js';
 import fs from 'fs/promises';
 import { DatabaseService } from './services/DatabaseService.js';
+import { StorageService } from './services/StorageService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,9 +28,11 @@ const lmStudio = new LMStudioService();
 const validator = new ValidationService(lmStudio);
 const materialProcessor = new MaterialProcessor(lmStudio);
 const db = new DatabaseService();
+const storage = new StorageService();
+await storage.initialize();
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
+const storageMulter = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadsDir);
   },
@@ -38,7 +41,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: storageMulter });
 
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
@@ -433,7 +436,106 @@ app.post('/api/responses', async (req, res): Promise<void> => {
   }
 });
 
+// Create debug info logging function
+function logServerConfiguration() {
+  console.log('\n----- EdgePrompt Server Configuration -----');
+  
+  // Log basic server info
+  console.log(`\n🌐 Server running on port: ${PORT}`);
+  console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
+  
+  // Log LM Studio configuration
+  const llmConfig = lmStudio.getConfig();
+  console.log('\n🤖 LLM Service Configuration:');
+  console.log(`   - API URL: ${llmConfig.apiUrl}`);
+  console.log(`   - Model: ${llmConfig.model || 'Not specified'}`);
+  console.log(`   - Temperature: ${llmConfig.temperature || 'Default'}`);
+  console.log(`   - Max Tokens: ${llmConfig.maxTokens || 'Default'}`);
+  
+  // Log database info
+  console.log('\n💾 Database Configuration:');
+  console.log(`   - Database Path: ${db.getDatabasePath()}`);
+  console.log(`   - Uploads Directory: ${uploadsDir}`);
+  
+  // Only try to access storage if it exists
+  try {
+    if (storage && typeof storage.getConfig === 'function') {
+      console.log(`   - Storage Root: ${storage.getConfig().rootDir}`);
+    } else {
+      console.log(`   - Storage: Not initialized`);
+    }
+  } catch (error) {
+    console.log(`   - Storage: Error accessing configuration`);
+  }
+  
+  // Log registered API endpoints
+  console.log('\n📡 Registered API Endpoints:');
+  
+  // Get all registered routes
+  const routes: string[] = [];
+  
+  // Function to extract routes recursively from Express app
+  function extractRoutes(app: any, basePath = '') {
+    if (!app._router || !app._router.stack) return;
+    
+    app._router.stack.forEach((layer: any) => {
+      if (layer.route) {
+        // Routes registered directly on the app
+        const methods = Object.keys(layer.route.methods)
+          .filter(method => layer.route.methods[method])
+          .map(method => method.toUpperCase())
+          .join(', ');
+        
+        routes.push(`   ${methods} ${basePath}${layer.route.path}`);
+      } else if (layer.name === 'router' && layer.handle.stack) {
+        // Router middleware
+        const routerPath = layer.regexp.toString()
+          .replace('\\/?(?=\\/|$)', '')
+          .replace('?', '')
+          .replace(/\\/g, '')
+          .replace(/\^|\$/g, '')
+          .replace(/\(\?:\(\[\^\\\/\]\+\?\)\)/g, ':param');
+          
+        layer.handle.stack.forEach((stackItem: any) => {
+          if (stackItem.route) {
+            const methods = Object.keys(stackItem.route.methods)
+              .filter(method => stackItem.route.methods[method])
+              .map(method => method.toUpperCase())
+              .join(', ');
+            
+            routes.push(`   ${methods} ${basePath}${routerPath}${stackItem.route.path}`);
+          }
+        });
+      }
+    });
+  }
+  
+  extractRoutes(app);
+  
+  // Filter to show only /api routes and sort them
+  const apiRoutes = routes
+    .filter(route => route.includes('/api'))
+    .sort((a, b) => {
+      // Sort by HTTP method first, then by path
+      const methodA = a.trim().split(' ')[0];
+      const methodB = b.trim().split(' ')[0];
+      const pathA = a.trim().split(' ')[1];
+      const pathB = b.trim().split(' ')[1];
+      
+      if (pathA === pathB) {
+        return methodA.localeCompare(methodB);
+      }
+      return pathA.localeCompare(pathB);
+    });
+  
+  // Output all API routes
+  apiRoutes.forEach(route => console.log(route));
+  
+  console.log('\n------------------------------------------\n');
+}
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  logServerConfiguration();
 }); 

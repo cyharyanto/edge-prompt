@@ -458,4 +458,8 @@ export class DatabaseService {
     
     return id;
   }
+
+  getDatabasePath() {
+    return this.db.name || 'research.db';
+  }
 } 

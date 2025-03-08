@@ -5,6 +5,9 @@ dotenv.config();
 
 export class LMStudioService {
   private baseUrl: string;
+  private model: string;
+  private temperature: number;
+  private maxTokens: number;
 
   constructor(baseUrl?: string) {
     const url = baseUrl || process.env.LM_STUDIO_URL;
@@ -77,5 +80,14 @@ export class LMStudioService {
       }
       return false;
     }
+  }
+
+  getConfig() {
+    return {
+      apiUrl: this.baseUrl,
+      model: this.model,
+      temperature: this.temperature,
+      maxTokens: this.maxTokens
+    };
   }
 } 

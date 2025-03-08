@@ -31,7 +31,9 @@ export class StorageService {
   }
 
   getConfig(): StorageConfig {
-    return { ...this.config }; // Return copy to prevent modification
+    return {
+      rootDir: this.rootDir
+    };
   }
 
   async initialize(): Promise<void> {

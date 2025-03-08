@@ -106,14 +106,14 @@ class ApiClient {
   }
 
   // Question endpoints
-  async generateQuestion(template: any, rules: any, context: string, useSourceLanguage: boolean = false) {
+  async generateQuestion(materialId: string, promptTemplateId: string, templateIndex: number, options: { useSourceLanguage?: boolean } = {}) {
     return this.request<any>('/generate', {
       method: 'POST',
       body: JSON.stringify({
-        template,
-        rules,
-        context,
-        useSourceLanguage
+        materialId,
+        promptTemplateId,
+        templateIndex,
+        useSourceLanguage: options.useSourceLanguage || false
       }),
     });
   }
@@ -122,7 +122,13 @@ class ApiClient {
     return this.request<any[]>(`/questions?materialId=${materialId}`);
   }
 
-  async saveQuestion(question: any) {
+  async saveQuestion(question: {
+    materialId: string;
+    promptTemplateId: string;
+    question: string;
+    questionId?: string;
+    metadata?: any;
+  }) {
     return this.request<any>('/questions', {
       method: 'POST',
       body: JSON.stringify(question),
@@ -130,13 +136,12 @@ class ApiClient {
   }
 
   // Response validation endpoints
-  async validateResponse(question: string, answer: string, rubric: any) {
+  async validateResponse(questionId: string, answer: string) {
     return this.request<ValidationResult>('/validate', {
       method: 'POST',
       body: JSON.stringify({
-        question,
-        answer,
-        rubric
+        questionId,
+        answer
       }),
     });
   }
@@ -153,11 +158,39 @@ class ApiClient {
   }
 
   // Content processing
-  async processMaterial(material: MaterialSource) {
+  async processMaterial(material: MaterialSource, projectId: string) {
     return this.request<any>('/materials/process', {
       method: 'POST',
-      body: JSON.stringify({ material }),
+      body: JSON.stringify({ material, projectId }),
     });
+  }
+
+  async updateMaterialContent(id: string, content: string) {
+    return this.request<Material>(`/materials/${id}/content`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async updateMaterialTitle(id: string, title: string) {
+    return this.request<Material>(`/materials/${id}/title`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    });
+  }
+
+  async reprocessMaterial(id: string, formData: FormData) {
+    const response = await fetch(`${API_BASE}/materials/${id}/reprocess`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.error || 'API request failed');
+    }
+
+    return response.json();
   }
 }
 

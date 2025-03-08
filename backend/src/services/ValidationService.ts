@@ -9,69 +9,63 @@ export class ValidationService {
   }
 
   async validateResponse(
-    question: string,
-    answer: string,
-    rubric: ValidationRule
+    question: string, 
+    answer: string, 
+    promptTemplate: any
   ): Promise<ValidationResult> {
+    // Use the prompt template to format the validation request
+    const promptContent = typeof promptTemplate.content === 'string' 
+      ? promptTemplate.content 
+      : JSON.stringify(promptTemplate.content);
+    
+    const prompt = `
+You are an educational assessment evaluator. Please evaluate the following answer to a question.
+
+QUESTION:
+${question}
+
+ANSWER:
+${answer}
+
+PROMPT TEMPLATE:
+${promptContent}
+
+Evaluate the answer on relevance, accuracy, and completeness. 
+Provide a score from 0-100 and constructive feedback.
+
+Return your evaluation as JSON with these keys:
+{
+  "isValid": boolean,
+  "score": number,
+  "feedback": string
+}
+`;
+
     try {
-      // Single-stage validation for now to debug
-      const result = await this.validateContent(question, answer, rubric);
-      return result;
+      const response = await this.lmStudio.complete(prompt);
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      
+      if (!jsonMatch) {
+        return {
+          isValid: false,
+          score: 0,
+          feedback: 'Failed to parse validation result'
+        };
+      }
+      
+      const result = JSON.parse(jsonMatch[0]);
+      return {
+        isValid: result.isValid,
+        score: result.score,
+        feedback: result.feedback
+      };
     } catch (error) {
       console.error('Validation error:', error);
       return {
         isValid: false,
         score: 0,
-        feedback: 'Validation failed: ' + (error instanceof Error ? error.message : 'Unknown error')
+        feedback: 'Error validating response: ' + (error instanceof Error ? error.message : 'Unknown error')
       };
-    }
-  }
-
-  private async validateContent(
-    question: string,
-    answer: string,
-    rubric: ValidationRule
-  ): Promise<ValidationResult> {
-    const prompt = `
-You are an educational assessment AI. Please evaluate the following student response:
-
-Question: ${question}
-Student Answer: ${answer}
-Evaluation Criteria: ${rubric.criteria}
-
-Provide your evaluation in the following JSON format:
-{
-  "isValid": boolean,
-  "score": number (between ${rubric.parameters.boundaries.min} and ${rubric.parameters.boundaries.max}),
-  "feedback": string (detailed feedback explaining the score)
-}
-
-Remember to:
-1. Check if the answer is valid and relevant
-2. Assign a score based on the criteria
-3. Provide constructive feedback
-4. Return ONLY valid JSON
-`;
-
-    try {
-      const response = await this.lmStudio.complete(prompt);
-      console.log('Raw LLM response:', response);
-      
-      try {
-        const parsed = JSON.parse(response.trim());
-        return {
-          isValid: Boolean(parsed.isValid),
-          score: Number(parsed.score),
-          feedback: String(parsed.feedback)
-        };
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        console.error('Invalid JSON response:', response);
-        throw new Error('Failed to parse LLM response as JSON');
-      }
-    } catch (error) {
-      console.error('Validation error:', error);
-      throw error;
     }
   }
 } 

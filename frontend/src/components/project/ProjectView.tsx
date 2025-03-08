@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Project } from '../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Project, Material } from '../../types';
 import { api } from '../../services/api';
 import { ProjectEditForm } from './ProjectEditForm';
 import { useProject } from '../../contexts/ProjectContext';
+import { MaterialDetailView } from '../teacher/MaterialDetailView';
 
 interface Props {
   project: Project;
@@ -14,6 +15,29 @@ export const ProjectView: React.FC<Props> = ({ project, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+
+  // Extract loadMaterials as a separate function outside useEffect
+  const loadMaterials = useCallback(async () => {
+    if (!project.id) return;
+    
+    setIsLoading(true);
+    try {
+      const projectMaterials = await api.getMaterials(project.id);
+      setMaterials(projectMaterials);
+    } catch (error) {
+      console.error('Error loading materials:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [project.id]);
+
+  // Load materials when the component mounts or project changes
+  useEffect(() => {
+    loadMaterials();
+  }, [loadMaterials]);
 
   // Get the current template
   const currentTemplate = project.promptTemplateId ? 
@@ -39,6 +63,17 @@ export const ProjectView: React.FC<Props> = ({ project, onUpdate }) => {
       setIsDeleting(false);
     }
   };
+
+  // If a material is selected, show its detail view
+  if (selectedMaterialId) {
+    return (
+      <MaterialDetailView 
+        materialId={selectedMaterialId} 
+        onBack={() => setSelectedMaterialId(null)} 
+        onRefresh={() => loadMaterials()}
+      />
+    );
+  }
 
   return (
     <div className="card">
@@ -127,6 +162,68 @@ export const ProjectView: React.FC<Props> = ({ project, onUpdate }) => {
           }}
         />
       )}
+
+      <div className="card mt-4">
+        <div className="card-header">
+          <h5 className="mb-0">Materials</h5>
+        </div>
+        <div className="card-body">
+          {isLoading ? (
+            <div className="text-center py-3">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-2">Loading materials...</p>
+            </div>
+          ) : materials.length === 0 ? (
+            <div className="text-center py-3">
+              <p className="text-muted">No materials found for this project.</p>
+              <button 
+                className="btn btn-outline-primary"
+                onClick={() => window.location.hash = '#content-generator'}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Add Material
+              </button>
+            </div>
+          ) : (
+            <div className="list-group">
+              {materials.map(material => (
+                <div 
+                  key={material.id} 
+                  className="list-group-item list-group-item-action"
+                  onClick={() => setSelectedMaterialId(material.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="d-flex w-100 justify-content-between">
+                    <h5 className="mb-1">{material.title}</h5>
+                    <small>
+                      <span className={`badge bg-${getBadgeColor(material.status)}`}>
+                        {material.status}
+                      </span>
+                    </small>
+                  </div>
+                  <p className="mb-1 text-truncate">{material.focusArea}</p>
+                  <small className="text-muted">
+                    Word count: {material.metadata?.wordCount || 'N/A'} • 
+                    Learning objectives: {material.metadata?.learningObjectives?.length || 0}
+                  </small>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-}; 
+};
+
+function getBadgeColor(status: string): string {
+  switch (status) {
+    case 'completed': return 'success';
+    case 'pending': return 'warning';
+    case 'processing': return 'primary';
+    case 'error': return 'danger';
+    default: return 'secondary';
+  }
+} 

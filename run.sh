@@ -1,5 +1,27 @@
 #!/bin/bash
 
+# Default LM Studio URL
+DEFAULT_LM_STUDIO_URL="http://localhost:1234"
+LM_STUDIO_URL=""
+
+# Process command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --lm-studio-url=*)
+      LM_STUDIO_URL="${1#*=}"
+      shift
+      ;;
+    --lm-studio-url)
+      LM_STUDIO_URL="$2"
+      shift 2
+      ;;
+    *)
+      # Unknown option
+      shift
+      ;;
+  esac
+done
+
 # Store process IDs
 MAIN_PID=""
 
@@ -28,13 +50,28 @@ cleanup() {
 trap cleanup SIGINT SIGTERM EXIT
 
 # Get Windows host IP from WSL2 (if running in WSL)
-if grep -qi microsoft /proc/version; then
-    WINDOWS_HOST=$(ip route show | grep -i default | awk '{ print $3}')
-    echo "Windows host IP: $WINDOWS_HOST"
-    
-    # Update .env with Windows host IP
-    sed -i "s|LM_STUDIO_URL=.*|LM_STUDIO_URL=http://$WINDOWS_HOST:1234|g" backend/.env
+if [ -z "$LM_STUDIO_URL" ]; then
+    if grep -qi microsoft /proc/version; then
+        WINDOWS_HOST=$(ip route show | grep -i default | awk '{ print $3}')
+        echo "Windows host IP detected: $WINDOWS_HOST"
+        LM_STUDIO_URL="http://$WINDOWS_HOST:1234"
+    else
+        LM_STUDIO_URL="$DEFAULT_LM_STUDIO_URL"
+    fi
+    echo "Using auto-detected LM Studio URL: $LM_STUDIO_URL"
+else
+    echo "Using provided LM Studio URL: $LM_STUDIO_URL"
 fi
+
+# Update .env with the LM Studio URL
+echo "LM_STUDIO_URL=$LM_STUDIO_URL" > backend/.env
+
+# Print connection info
+echo "================================================================="
+echo "EdgePrompt will connect to LM Studio at: $LM_STUDIO_URL"
+echo "If this is incorrect, press Ctrl+C and restart with:"
+echo "  ./run.sh --lm-studio-url=http://your-lm-studio-ip:1234"
+echo "================================================================="
 
 # Install dependencies and build packages
 echo "Installing dependencies..."

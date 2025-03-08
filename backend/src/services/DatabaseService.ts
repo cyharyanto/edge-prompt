@@ -367,10 +367,11 @@ export class DatabaseService {
     materialId: string;
     promptTemplateId: string;
     question: string;
-    constraints?: any;
+    template: string;
+    rules: string;
     metadata?: any;
   }) {
-    const stmt = this.db.prepare(`
+    const stmt = this.prepareStatement(`
       INSERT INTO generated_questions (
         id, material_id, prompt_template_id, question, constraints, metadata
       )
@@ -383,11 +384,60 @@ export class DatabaseService {
       params.materialId,
       params.promptTemplateId,
       params.question,
-      params.constraints ? JSON.stringify(params.constraints) : null,
-      params.metadata ? JSON.stringify(params.metadata) : null
+      params.template,
+      params.metadata ? JSON.stringify({
+        ...params.metadata,
+        rules: params.rules
+      }) : null
     );
     
     return id;
+  }
+
+  async getQuestionsByMaterial(materialId: string) {
+    const stmt = this.db.prepare(`
+      SELECT id, material_id, prompt_template_id, question, constraints, metadata
+      FROM generated_questions 
+      WHERE material_id = ?
+      ORDER BY created_at DESC
+    `);
+    
+    const questions = stmt.all(materialId) as any[];
+    
+    return questions.map(q => {
+      // Parse metadata to get the rules field (which contains our rubric)
+      let metadata = {};
+      let rubric = {};
+      
+      try {
+        metadata = JSON.parse(q.metadata || '{}');
+        // The rules are stored in metadata.rules in our database schema
+        if (metadata.rules) {
+          rubric = JSON.parse(metadata.rules);
+          delete metadata.rules; // Remove from metadata to avoid duplication
+        }
+      } catch (e) {
+        console.warn(`Failed to parse metadata for question ${q.id}`, e);
+      }
+      
+      // Parse template constraints
+      let template = {};
+      try {
+        template = JSON.parse(q.constraints || '{}');
+      } catch (e) {
+        console.warn(`Failed to parse constraints for question ${q.id}`, e);
+      }
+      
+      return {
+        id: q.id,
+        materialId: q.material_id,
+        promptTemplateId: q.prompt_template_id,
+        question: q.question,
+        template,
+        rubric,  // Include the parsed rubric
+        metadata
+      };
+    });
   }
 
   // Response methods
@@ -461,5 +511,74 @@ export class DatabaseService {
 
   getDatabasePath() {
     return this.db.name || 'research.db';
+  }
+
+  async updateMaterialMetadata(materialId: string, metadata: any): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE materials 
+      SET metadata = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(
+      JSON.stringify(metadata),
+      materialId
+    );
+  }
+
+  async updateMaterialContent(materialId: string, content: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE materials 
+      SET content = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(
+      content,
+      materialId
+    );
+  }
+
+  async updateMaterialTitle(materialId: string, title: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE materials 
+      SET title = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(
+      title,
+      materialId
+    );
+  }
+
+  async updateMaterialReprocessed(params: {
+    id: string;
+    content: string;
+    filePath: string;
+    fileType: string;
+    fileSize: number;
+    metadata: any;
+  }): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE materials 
+      SET 
+        content = ?,
+        file_path = ?,
+        file_type = ?,
+        file_size = ?,
+        metadata = ?,
+        status = 'completed'
+      WHERE id = ?
+    `);
+
+    stmt.run(
+      params.content,
+      params.filePath,
+      params.fileType,
+      params.fileSize,
+      JSON.stringify(params.metadata),
+      params.id
+    );
   }
 } 

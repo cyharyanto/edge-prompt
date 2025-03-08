@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Template, ValidationRule, MaterialSource, ContentTemplate } from '../../../../backend/src/types';
 import { MaterialUploader } from './MaterialUploader';
 import { api } from '../../services/api';
 import { useProject } from '../../contexts/ProjectContext';
+import { ProjectSelectionModal } from '../common/ProjectSelectionModal';
+import { SimplifiedMaterialUploader } from './SimplifiedMaterialUploader';
 
 interface Props {
   onGenerate: (template: Template, rules: ValidationRule) => void;
@@ -15,13 +17,6 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
   const [template, setTemplate] = useState<Template>({
     pattern: '',
     constraints: []
-  });
-  const [rules, setRules] = useState<ValidationRule>({
-    criteria: '',
-    parameters: {
-      threshold: 0.7,
-      boundaries: { min: 0, max: 100 }
-    }
   });
   const [uploadedContent, setUploadedContent] = useState<{
     id?: string;
@@ -41,8 +36,18 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
     error?: string;
   } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showProjectWarning, setShowProjectWarning] = useState(!projectId && !activeProject);
+  const [showProjectModal, setShowProjectModal] = useState(false);
+
+  useEffect(() => {
+    setShowProjectWarning(!projectId && !activeProject);
+  }, [projectId, activeProject]);
 
   const handleMaterialLoad = (material: MaterialSource) => {
+    if (!material.id) {
+      console.warn('Material loaded without an ID');
+    }
+    
     setUploadedContent({
       id: material.id,
       content: material.content,
@@ -71,9 +76,8 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
 
     try {
       const validationResult = await api.validateResponse(
-        template.pattern,
-        studentAnswer,
-        rules
+        generatedQuestionId,
+        studentAnswer
       );
 
       const responseData = await api.saveResponse({
@@ -101,37 +105,34 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
 
   const handleGenerateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!template.pattern || !uploadedContent?.id) {
+    if (!template.pattern || !uploadedContent) {
       alert('Please select or enter a question template and upload material');
+      return;
+    }
+
+    if (!uploadedContent.id) {
+      alert('Material ID is missing. Please re-upload the material.');
       return;
     }
 
     setIsGenerating(true);
 
     try {
-      const result = await api.generateQuestion(
-        template,
-        rules,
-        uploadedContent.content,
-        uploadedContent.useSourceLanguage
+      // Generate question - backend will save it directly
+      const generatedQuestion = await api.generateQuestion(
+        uploadedContent.id,
+        activeProject?.promptTemplateId || promptTemplates[0]?.id,
+        0,  // First template
+        { useSourceLanguage: uploadedContent.useSourceLanguage }
       );
       
-      const questionData = await api.saveQuestion({
-        materialId: uploadedContent.id,
-        promptTemplateId: activeProject?.promptTemplateId || promptTemplates[0]?.id,
-        question: result.question,
-        constraints: template.constraints,
-        metadata: {
-          template: template.pattern,
-          rules: rules
-        }
-      });
+      // Store the question ID for validation purposes
+      setGeneratedQuestionId(generatedQuestion.id);
       
-      setGeneratedQuestionId(questionData.id);
-      
+      // Update the UI with the generated question
       setTemplate({
         ...template,
-        pattern: result.question
+        pattern: generatedQuestion.question
       });
 
       setActiveTab('student');
@@ -143,9 +144,21 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
     }
   };
 
+  const handleUploadClick = () => {
+    if (!projectId && !activeProject) {
+      setShowProjectModal(true);
+    }
+  };
+
   return (
     <div>
-      {/* Navigation Tabs */}
+      {showProjectWarning && (
+        <div className="alert alert-warning mb-4">
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>No project selected.</strong> Please select a project from the dropdown in the navigation bar before uploading materials.
+        </div>
+      )}
+
       <ul className="nav nav-tabs mb-4">
         <li className="nav-item">
           <button 
@@ -167,20 +180,22 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
               backgroundColor: activeTab === 'student' ? '#198754' : 'transparent',
               color: activeTab === 'student' ? 'white' : '#198754'
             }}
+            disabled={!uploadedContent}
           >
             <i className="bi bi-person-video3"></i> Student Interface
           </button>
         </li>
       </ul>
 
-      {/* Teacher Interface */}
       {activeTab === 'teacher' && (
         <>
-          <MaterialUploader onMaterialLoad={handleMaterialLoad} />
+          <SimplifiedMaterialUploader 
+            onMaterialLoad={handleMaterialLoad} 
+            projectId={projectId || (activeProject ? activeProject.id : undefined)}
+          />
           
           {uploadedContent && (
             <>
-              {/* Content Analysis Card */}
               <div className="card mb-4">
                 <div className="card-header d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">
@@ -193,7 +208,6 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
                 
                 <div className="card-body">
                   <div className="row">
-                    {/* Content Preview */}
                     <div className="col-lg-6">
                       <div className="mb-3">
                         <h6><i className="bi bi-file-text"></i> Content Preview</h6>
@@ -206,7 +220,6 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
                       </div>
                     </div>
 
-                    {/* Learning Objectives and Templates */}
                     <div className="col-lg-6">
                       <div className="mb-3">
                         <h6><i className="bi bi-bullseye"></i> Learning Objectives</h6>
@@ -244,7 +257,6 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
                 </div>
               </div>
 
-              {/* Question Generation Card */}
               <div className="card">
                 <div className="card-header bg-primary text-white">
                   <h5 className="mb-0">
@@ -282,84 +294,6 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
                           </div>
                         </div>
                       </div>
-
-                      <div className="col-md-6">
-                        <div className="mb-3">
-                          <label className="form-label">
-                            <i className="bi bi-list-ul"></i> Validation Rules
-                          </label>
-                          <textarea
-                            className="form-control"
-                            rows={3}
-                            value={rules.criteria}
-                            onChange={(e) => setRules({...rules, criteria: e.target.value})}
-                            placeholder="Enter validation criteria..."
-                            required
-                          />
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="form-label">
-                            <i className="bi bi-sliders"></i> Scoring Parameters
-                          </label>
-                          <div className="input-group mb-2">
-                            <span className="input-group-text">Threshold</span>
-                            <input
-                              type="number"
-                              className="form-control"
-                              min="0"
-                              max="1"
-                              step="0.1"
-                              value={rules.parameters.threshold}
-                              onChange={(e) => setRules({
-                                ...rules,
-                                parameters: {
-                                  ...rules.parameters,
-                                  threshold: parseFloat(e.target.value)
-                                }
-                              })}
-                              required
-                            />
-                          </div>
-                          <div className="input-group">
-                            <span className="input-group-text">Score Range</span>
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="Min"
-                              value={rules.parameters.boundaries.min}
-                              onChange={(e) => setRules({
-                                ...rules,
-                                parameters: {
-                                  ...rules.parameters,
-                                  boundaries: {
-                                    ...rules.parameters.boundaries,
-                                    min: parseInt(e.target.value)
-                                  }
-                                }
-                              })}
-                              required
-                            />
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="Max"
-                              value={rules.parameters.boundaries.max}
-                              onChange={(e) => setRules({
-                                ...rules,
-                                parameters: {
-                                  ...rules.parameters,
-                                  boundaries: {
-                                    ...rules.parameters.boundaries,
-                                    max: parseInt(e.target.value)
-                                  }
-                                }
-                              })}
-                              required
-                            />
-                          </div>
-                        </div>
-                      </div>
                     </div>
 
                     <div className="text-end">
@@ -388,7 +322,6 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
         </>
       )}
 
-      {/* Student Interface */}
       {activeTab === 'student' && (
         <div className="card">
           <div className="card-header bg-success text-white">
@@ -449,6 +382,11 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => 
           </div>
         </div>
       )}
+
+      <ProjectSelectionModal 
+        isOpen={showProjectModal} 
+        onClose={() => setShowProjectModal(false)} 
+      />
     </div>
   );
 }; 

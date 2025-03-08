@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ValidationResult } from '../../../../backend/src/types';
+import { ValidationResult } from '../../types/edgeprompt';
 import { api } from '../../services/api';
 
 interface Props {
@@ -10,18 +10,24 @@ interface Props {
 
 export const ResponseValidator: React.FC<Props> = ({ question, questionId, rubric }) => {
   const [answer, setAnswer] = useState('');
-  const [result, setResult] = useState<ValidationResult | null>(null);
+  const [feedback, setFeedback] = useState<ValidationResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [responseId, setResponseId] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!answer.trim()) return;
-    
+  const handleAnswerSubmit = async () => {
+    if (!answer.trim() || !questionId) {
+      return;
+    }
+
     setIsSubmitting(true);
+    setFeedback(null);
+
     try {
-      const validationResult = await api.validateResponse(question, answer, rubric);
-      
+      // Send only question ID and answer
+      const validationResult = await api.validateResponse(
+        questionId,
+        answer
+      );
+
       const responseData = await api.saveResponse({
         questionId,
         response: answer,
@@ -31,11 +37,20 @@ export const ResponseValidator: React.FC<Props> = ({ question, questionId, rubri
           isValid: validationResult.isValid
         }
       });
-      
-      setResponseId(responseData.id);
-      setResult(validationResult);
+
+      // Now setting the ID correctly as part of the ValidationResult
+      setFeedback({
+        ...validationResult,
+        id: responseData.id
+      });
     } catch (error) {
-      console.error('Validation error:', error);
+      // Now error is a valid property of ValidationResult
+      setFeedback({
+        isValid: false,
+        score: 0,
+        feedback: '',
+        error: error instanceof Error ? error.message : 'Failed to validate answer'
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -52,7 +67,10 @@ export const ResponseValidator: React.FC<Props> = ({ question, questionId, rubri
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        handleAnswerSubmit();
+      }}>
         <div className="mb-3">
           <label htmlFor="answer" className="form-label">Your Answer:</label>
           <textarea
@@ -82,12 +100,20 @@ export const ResponseValidator: React.FC<Props> = ({ question, questionId, rubri
         </button>
       </form>
 
-      {result && (
-        <div className={`alert mt-4 ${result.isValid ? 'alert-success' : 'alert-warning'}`}>
+      {feedback && (
+        <div className={`alert mt-4 ${feedback.error ? 'alert-danger' : 'alert-success'}`}>
           <h5>Feedback:</h5>
-          <p>Score: {result.score}</p>
-          <p>{result.feedback}</p>
-          <p className="text-muted small">Response ID: {responseId}</p>
+          {feedback.error ? (
+            <p className="text-danger">{feedback.error}</p>
+          ) : (
+            <>
+              <p>Score: {feedback.score}</p>
+              <p>{feedback.feedback}</p>
+            </>
+          )}
+          {feedback.id && (
+            <p className="text-muted small">Response ID: {feedback.id}</p>
+          )}
         </div>
       )}
     </div>

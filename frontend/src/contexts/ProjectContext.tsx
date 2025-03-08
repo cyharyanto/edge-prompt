@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Project, PromptTemplate } from '../types';
 import { api } from '../services/api';
 
@@ -15,58 +15,67 @@ interface ProjectContextType {
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-export function ProjectProvider({ children }: { children: React.ReactNode }) {
+export const ProjectProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshProjects = async () => {
+  // Load projects and templates
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const fetchedProjects = await api.getProjects();
-      setProjects(fetchedProjects);
-      setError(null);
+      const [projectsData, templatesData] = await Promise.all([
+        api.getProjects(),
+        api.getPromptTemplates()
+      ]);
+      
+      setProjects(projectsData);
+      setPromptTemplates(templatesData);
+      
+      // Automatically select the first project if there's only one and no active project
+      if (projectsData.length === 1 && !activeProject) {
+        setActiveProject(projectsData[0]);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load projects');
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+      console.error('Error loading project data:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeProject]);
 
-  const refreshTemplates = async () => {
-    try {
-      const templates = await api.getPromptTemplates();
-      setPromptTemplates(templates);
-      return templates;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load templates');
-      return [];
-    }
-  };
-
+  // Load initial data
   useEffect(() => {
-    Promise.all([refreshProjects(), refreshTemplates()]);
-  }, []);
+    loadData();
+  }, [loadData]);
 
+  // Add a refreshTemplates function that delegates to loadData
+  const refreshTemplates = useCallback(async () => {
+    await loadData();
+    return promptTemplates;
+  }, [loadData, promptTemplates]);
+
+  // Provide context
   return (
-    <ProjectContext.Provider
-      value={{
-        projects,
-        promptTemplates,
-        activeProject,
-        setActiveProject,
-        loading,
-        error,
-        refreshProjects,
-        refreshTemplates,
+    <ProjectContext.Provider 
+      value={{ 
+        projects, 
+        activeProject, 
+        setActiveProject, 
+        promptTemplates, 
+        loading, 
+        error, 
+        refreshProjects: loadData,
+        refreshTemplates 
       }}
     >
       {children}
     </ProjectContext.Provider>
   );
-}
+};
 
 export function useProject() {
   const context = useContext(ProjectContext);

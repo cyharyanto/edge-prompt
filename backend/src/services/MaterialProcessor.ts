@@ -77,7 +77,31 @@ export class MaterialProcessor {
         content: filePath || source.content
       });
 
-      // Update material with content and file info
+      // Extract learning objectives
+      const objectives = await this.extractLearningObjectives(
+        content, 
+        source.metadata.focusArea || '',
+        source.metadata.useSourceLanguage
+      );
+
+      // Suggest question templates
+      const templates = await this.suggestQuestionTemplates(
+        content,
+        objectives,
+        source.metadata.focusArea || '',
+        source.metadata.useSourceLanguage
+      );
+
+      // Update material's metadata to include the generated content
+      const updatedMetadata = {
+        ...source.metadata,
+        learningObjectives: objectives,
+        templates: templates,
+        wordCount: content.split(/\s+/).length,
+        processedAt: new Date().toISOString()
+      };
+
+      // Update material with content, file info, and metadata
       await this.db.updateMaterialFile(
         materialId,
         content,
@@ -86,6 +110,9 @@ export class MaterialProcessor {
         fileSize || null,
         'completed'
       );
+
+      // Update the metadata separately
+      await this.db.updateMaterialMetadata(materialId, updatedMetadata);
 
       return await this.db.getMaterial(materialId);
     } catch (error) {
@@ -286,12 +313,25 @@ Return in this format:
     }
   }
 
-  async generateQuestion(template: Template, context: string, useSourceLanguage: boolean = false): Promise<string> {
-    const truncatedContext = this.truncateContent(context);
+  async generateQuestion(
+    template: any, 
+    content: string, 
+    promptTemplate: any,
+    useSourceLanguage: boolean = false
+  ): Promise<string> {
+    const truncatedContent = this.truncateContent(content);
+    
+    // Use the prompt template content to shape the generation
+    const promptContent = typeof promptTemplate.content === 'string' 
+      ? promptTemplate.content 
+      : JSON.stringify(promptTemplate.content);
     
     const prompt = `
 You are an educational content generator. Generate a question based on this template and context.
 ${useSourceLanguage ? 'Generate the question in the same language as the context.' : 'Generate the question in English.'}
+
+PROMPT TEMPLATE:
+${promptContent}
 
 TEMPLATE:
 ${template.pattern}
@@ -300,7 +340,7 @@ CONSTRAINTS:
 ${template.constraints.join('\n')}
 
 CONTEXT:
-${truncatedContext}
+${truncatedContent}
 
 IMPORTANT: Generate a single question that follows the template and constraints, and is relevant to the context.
 Return ONLY the question text, with no additional formatting or explanation.
@@ -308,5 +348,72 @@ Return ONLY the question text, with no additional formatting or explanation.
 
     const response = await this.lmStudio.complete(prompt);
     return response.replace(/^["']|["']$/g, '').trim();
+  }
+
+  async generateRubric(
+    question: string,
+    template: any,
+    promptTemplate: any
+  ): Promise<any> {
+    // Retrieve the rubric generation logic from the prompt template
+    const promptContent = typeof promptTemplate.content === 'string' 
+      ? promptTemplate.content 
+      : JSON.stringify(promptTemplate.content);
+    
+    const prompt = `
+You are an educational assessment expert. Create a validation rubric for this question.
+
+QUESTION:
+${question}
+
+TEMPLATE:
+${template.pattern}
+
+LEARNING OBJECTIVES:
+${template.learningObjectives.join('\n')}
+
+PROMPT TEMPLATE:
+${promptContent}
+
+Generate a detailed rubric with:
+1. A list of validation checks (what makes a good answer)
+2. Scoring guidelines
+3. Maximum score
+4. Criteria weights
+
+Format as valid JSON with these keys: 
+{ 
+  "validationChecks": string[], 
+  "scoringGuidelines": string[], 
+  "maxScore": number,
+  "criteriaWeights": {string: number}
+}
+`;
+
+    const response = await this.lmStudio.complete(prompt);
+    
+    // Extract JSON from response and parse it
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return {
+          validationChecks: ["Answer should be relevant to the question"],
+          scoringGuidelines: ["Score based on relevance and accuracy"],
+          maxScore: 10,
+          criteriaWeights: { relevance: 1.0 }
+        };
+      }
+      
+      const rubricJson = JSON.parse(jsonMatch[0]);
+      return rubricJson;
+    } catch (error) {
+      console.error("Error parsing rubric JSON:", error);
+      return {
+        validationChecks: ["Answer should be relevant to the question"],
+        scoringGuidelines: ["Score based on relevance and accuracy"],
+        maxScore: 10,
+        criteriaWeights: { relevance: 1.0 }
+      };
+    }
   }
 } 

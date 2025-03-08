@@ -1,15 +1,104 @@
-import React, { useState } from 'react';
-import { ContentGenerator } from './components/teacher/ContentGenerator';
-import { ProjectPanel } from './components/project/ProjectPanel';
+import React, { useState, useEffect } from 'react';
+import { SimplifiedMaterialUploader } from './components/teacher/SimplifiedMaterialUploader';
+import { MaterialDetailView } from './components/teacher/MaterialDetailView';
 import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
 import PromptEngineeringTool from './components/tools/PromptEngineeringTool';
+import { api } from './services/api';
+import { Material } from './types';
 
 // Main content wrapper that uses the project context
 const MainContent: React.FC = () => {
-  const { activeProject } = useProject();
+  const { projects, activeProject, setActiveProject } = useProject();
   const [activeTab, setActiveTab] = useState<'generator' | 'templates' | 'promptTools'>('generator');
+  const [autoSelectDisabled, setAutoSelectDisabled] = useState(false);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+
+  // Auto-select first project if none selected
+  useEffect(() => {
+    if (!activeProject && projects.length > 0 && !autoSelectDisabled) {
+      setActiveProject(projects[0]);
+    }
+  }, [projects, activeProject, setActiveProject, autoSelectDisabled]);
+
+  // Load materials when active project changes
+  useEffect(() => {
+    const loadMaterials = async () => {
+      if (!activeProject) return;
+      
+      setIsLoadingMaterials(true);
+      try {
+        const projectMaterials = await api.getMaterials(activeProject.id);
+        setMaterials(projectMaterials);
+      } catch (error) {
+        console.error('Error loading materials:', error);
+      } finally {
+        setIsLoadingMaterials(false);
+      }
+    };
+    
+    loadMaterials();
+  }, [activeProject]);
+
+  // Handle material upload completion
+  const handleMaterialUploaded = async () => {
+    if (!activeProject) return;
+    
+    try {
+      const projectMaterials = await api.getMaterials(activeProject.id);
+      setMaterials(projectMaterials);
+    } catch (error) {
+      console.error('Error refreshing materials:', error);
+    }
+  };
+
+  // Handle back to projects
+  const handleBackToProjects = () => {
+    setAutoSelectDisabled(true);
+    setActiveProject(null);
+  };
+
+  // Get main content based on tab and selection
+  const getMainContent = () => {
+    if (!activeProject) {
+      return (
+        <div className="alert alert-info">
+          <i className="bi bi-info-circle me-2"></i>
+          Please select a project to begin
+        </div>
+      );
+    }
+
+    if (activeTab === 'generator') {
+      if (selectedMaterialId) {
+        return (
+          <MaterialDetailView 
+            materialId={selectedMaterialId}
+            onBack={() => setSelectedMaterialId(null)}
+            onRefresh={handleMaterialUploaded}
+          />
+        );
+      } else {
+        return (
+          <div className="text-center p-5 bg-light rounded border">
+            <i className="bi bi-file-earmark-text display-1 text-muted"></i>
+            <h4 className="mt-3">Select a Material</h4>
+            <p className="text-muted">
+              Click on a material from the list on the left,<br />
+              or upload a new material to begin.
+            </p>
+          </div>
+        );
+      }
+    } else if (activeTab === 'templates') {
+      return <PromptTemplateManager />;
+    } else {
+      return <PromptEngineeringTool />;
+    }
+  };
 
   return (
     <div className="container-fluid">
@@ -18,81 +107,174 @@ const MainContent: React.FC = () => {
           <h1 className="h4 mb-0">
             <i className="bi bi-braces"></i> EdgePrompt
           </h1>
-          {activeProject && (
+          {activeProject ? (
             <div className="badge bg-light text-primary">
               {activeProject.name} ({activeProject.modelName})
+            </div>
+          ) : (
+            <div className="badge bg-warning text-dark">
+              <i className="bi bi-exclamation-triangle-fill me-1"></i>
+              No project selected
             </div>
           )}
         </div>
       </header>
 
-      <div className="container-fluid">
-        <div className="row">
-          {/* Project Panel */}
-          <div className="col-xxl-3 mb-4">
-            <ProjectPanel />
+      <div className="row">
+        {/* Left Sidebar */}
+        <div className="col-md-3">
+          {/* Projects Section */}
+          <div className="card mb-3">
+            <div className="card-header bg-light">
+              <h5 className="mb-0">Projects</h5>
+            </div>
+            <div className="card-body p-0">
+              {projects.length === 0 ? (
+                <div className="text-center py-3">
+                  <p className="text-muted">No projects found</p>
+                  <button 
+                    className="btn btn-sm btn-primary"
+                    onClick={() => {/* Open project creation modal */}}
+                  >
+                    <i className="bi bi-plus-circle me-1"></i>
+                    Create Project
+                  </button>
+                </div>
+              ) : (
+                <div className="list-group list-group-flush">
+                  {projects.map(project => (
+                    <button
+                      key={project.id}
+                      className={`list-group-item list-group-item-action ${activeProject?.id === project.id ? 'active' : ''}`}
+                      onClick={() => setActiveProject(project)}
+                    >
+                      <div className="d-flex w-100 justify-content-between">
+                        <h6 className="mb-0">{project.name}</h6>
+                        <small>{project.modelName}</small>
+                      </div>
+                      <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
+                        {project.description}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Main Content */}
-          <div className="col-xxl-9">
-            {activeProject ? (
-              <div>
-                <ul className="nav nav-tabs mb-4">
-                  <li className="nav-item">
-                    <button 
-                      className={`nav-link ${activeTab === 'generator' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('generator')}
-                    >
-                      <i className="bi bi-file-text me-1"></i>
-                      Content Generator
-                    </button>
-                  </li>
-                  <li className="nav-item">
-                    <button 
-                      className={`nav-link ${activeTab === 'templates' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('templates')}
-                    >
-                      <i className="bi bi-file-earmark-text me-1"></i>
-                      Prompt Templates
-                    </button>
-                  </li>
-                  <li className="nav-item">
-                    <button 
-                      className={`nav-link ${activeTab === 'promptTools' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('promptTools')}
-                    >
-                      <i className="bi bi-tools me-1"></i>
-                      Prompt Engineering Tools
-                    </button>
-                  </li>
-                </ul>
+          {/* Upload Material Section (only when project is selected) */}
+          {activeProject && (
+            <>
+              <SimplifiedMaterialUploader onMaterialUploaded={handleMaterialUploaded} />
 
-                {activeTab === 'generator' && (
-                  <ContentGenerator 
-                    onGenerate={(template, rules) => {
-                      console.log('Generated:', { template, rules });
-                    }}
-                  />
-                )}
-                {activeTab === 'templates' && (
-                  <PromptTemplateManager />
-                )}
-                {activeTab === 'promptTools' && (
-                  <PromptEngineeringTool />
-                )}
+              {/* Materials List */}
+              <div className="card">
+                <div className="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">
+                    <i className="bi bi-journal-text me-1"></i>
+                    Materials
+                  </h5>
+                </div>
+                <div className="card-body p-0">
+                  {isLoadingMaterials ? (
+                    <div className="text-center py-3">
+                      <div className="spinner-border spinner-border-sm" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                      <p className="small mt-2 mb-0">Loading materials...</p>
+                    </div>
+                  ) : materials.length === 0 ? (
+                    <div className="text-center py-3">
+                      <p className="text-muted small mb-0">No materials found</p>
+                    </div>
+                  ) : (
+                    <div className="list-group list-group-flush">
+                      {materials.map(material => (
+                        <button
+                          key={material.id}
+                          className={`list-group-item list-group-item-action ${selectedMaterialId === material.id ? 'active' : ''}`}
+                          onClick={() => setSelectedMaterialId(material.id)}
+                        >
+                          <div className="d-flex justify-content-between">
+                            <span className="fw-semibold text-truncate" style={{ maxWidth: '180px' }}>
+                              {material.title || 'Untitled Material'}
+                            </span>
+                            <span className={`badge bg-${getBadgeColor(material.status)}`}>
+                              {material.status}
+                            </span>
+                          </div>
+                          <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
+                            {material.focusArea}
+                          </small>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="alert alert-info">
-                <i className="bi bi-info-circle me-2"></i>
-                Please select or create a project to begin
-              </div>
-            )}
-          </div>
+            </>
+          )}
+        </div>
+
+        {/* Main Content Area */}
+        <div className="col-md-9">
+          {activeProject && (
+            <ul className="nav nav-tabs mb-4">
+              <li className="nav-item">
+                <button 
+                  className={`nav-link ${activeTab === 'generator' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('generator');
+                  }}
+                >
+                  <i className="bi bi-file-text me-1"></i>
+                  Content Generator
+                </button>
+              </li>
+              <li className="nav-item">
+                <button 
+                  className={`nav-link ${activeTab === 'templates' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('templates');
+                    setSelectedMaterialId(null);
+                  }}
+                >
+                  <i className="bi bi-file-earmark-text me-1"></i>
+                  Prompt Templates
+                </button>
+              </li>
+              <li className="nav-item">
+                <button 
+                  className={`nav-link ${activeTab === 'promptTools' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('promptTools');
+                    setSelectedMaterialId(null);
+                  }}
+                >
+                  <i className="bi bi-tools me-1"></i>
+                  Prompt Engineering Tools
+                </button>
+              </li>
+            </ul>
+          )}
+
+          {getMainContent()}
         </div>
       </div>
     </div>
   );
 };
+
+// Helper function for badge colors
+function getBadgeColor(status: string): string {
+  switch (status) {
+    case 'completed': return 'success';
+    case 'pending': return 'warning';
+    case 'processing': return 'primary';
+    case 'error': return 'danger';
+    default: return 'secondary';
+  }
+}
 
 // Wrap the app with ProjectProvider
 function App() {

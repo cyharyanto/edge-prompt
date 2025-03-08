@@ -44,6 +44,15 @@ export interface ValidationRule {
   };
 }
 
+export interface ContentTemplate {
+  pattern: string;
+  constraints: string[];
+  source: any;
+  targetGrade: string;
+  subject: string;
+  learningObjectives: string[];
+}
+
 export interface Material {
   id: string;
   projectId: string;
@@ -55,6 +64,12 @@ export interface Material {
   fileType?: string;
   fileSize?: number;
   status: string;
-  metadata?: any;
+  metadata?: {
+    learningObjectives?: string[];
+    templates?: ContentTemplate[];
+    wordCount?: number;
+    processedAt?: string;
+    [key: string]: any;
+  };
   createdAt: string;
 } 

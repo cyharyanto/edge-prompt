@@ -6,7 +6,8 @@ import { ProjectView } from './ProjectView';
 
 export const ProjectPanel: React.FC = () => {
   const { projects, activeProject, setActiveProject, loading, error, refreshProjects } = useProject();
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [showProjectSelection, setShowProjectSelection] = useState(false);
 
   const getConfiguration = (project: Project): ProjectConfiguration => {
     return typeof project.configuration === 'string'
@@ -14,15 +15,24 @@ export const ProjectPanel: React.FC = () => {
       : project.configuration;
   };
 
+  const handleBackToProjects = () => {
+    setActiveProject(null);
+    setShowProjectSelection(true);
+  };
+
+  const handleSelectProject = (project: Project) => {
+    setActiveProject(project);
+    setShowProjectSelection(false);
+  };
+
   if (loading) {
     return (
       <div className="card">
-        <div className="card-body">
-          <div className="d-flex justify-content-center">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+        <div className="card-body text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
+          <p className="mt-3">Loading projects...</p>
         </div>
       </div>
     );
@@ -31,96 +41,92 @@ export const ProjectPanel: React.FC = () => {
   if (error) {
     return (
       <div className="alert alert-danger">
-        <i className="bi bi-exclamation-triangle me-2"></i>
-        {error}
+        <h5 className="alert-heading">Error</h5>
+        <p>{error}</p>
+        <button 
+          className="btn btn-outline-danger" 
+          onClick={() => refreshProjects()}
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
-  // If a project is selected, show its details
-  if (activeProject) {
+  if (isCreatingProject) {
     return (
-      <>
+      <ProjectForm 
+        onSuccess={() => {
+          setIsCreatingProject(false);
+          refreshProjects();
+        }}
+        onClose={() => setIsCreatingProject(false)}
+      />
+    );
+  }
+
+  if (activeProject && !showProjectSelection) {
+    return (
+      <div>
         <ProjectView 
           project={activeProject} 
-          onUpdate={() => {
-            refreshProjects();
-          }}
+          onUpdate={refreshProjects} 
         />
-        <button 
-          className="btn btn-link text-muted mt-2"
-          onClick={() => setActiveProject(null)}
-        >
-          <i className="bi bi-arrow-left me-1"></i>
-          Back to Projects
-        </button>
-      </>
+        <div className="mt-3">
+          <button 
+            className="btn btn-sm btn-outline-secondary"
+            onClick={handleBackToProjects}
+          >
+            <i className="bi bi-arrow-left me-1"></i>
+            Back to Projects
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="card">
-      <div className="card-header bg-light">
-        <div className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">
-            <i className="bi bi-folder me-2"></i>
-            Projects
-          </h5>
-          <button 
-            className="btn btn-sm btn-primary"
-            onClick={() => setIsCreating(true)}
-          >
-            <i className="bi bi-plus-circle me-1"></i>
-            New Project
-          </button>
-        </div>
+      <div className="card-header d-flex justify-content-between align-items-center">
+        <h5 className="mb-0">Projects</h5>
+        <button 
+          className="btn btn-sm btn-primary"
+          onClick={() => setIsCreatingProject(true)}
+        >
+          <i className="bi bi-plus"></i>
+        </button>
       </div>
 
-      <div className="list-group list-group-flush">
-        {projects.map(project => {
-          const config = getConfiguration(project);
-          return (
+      {projects.length === 0 ? (
+        <div className="card-body text-center py-5">
+          <p className="text-muted mb-3">No projects found.</p>
+          <button 
+            className="btn btn-primary"
+            onClick={() => setIsCreatingProject(true)}
+          >
+            <i className="bi bi-plus-circle me-2"></i>
+            Create Your First Project
+          </button>
+        </div>
+      ) : (
+        <div className="list-group list-group-flush">
+          {projects.map(project => (
             <button
               key={project.id}
               className="list-group-item list-group-item-action"
-              onClick={() => setActiveProject(project)}
+              onClick={() => handleSelectProject(project)}
             >
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="mb-1">{project.name}</h6>
-                  <small className="text-muted d-block">
-                    {project.modelName} · {config.language}
-                  </small>
-                </div>
-                <div className="text-end">
-                  <span className={`badge bg-${getSubjectColor(config.subject)}`}>
-                    {config.subject}
-                  </span>
-                  <small className="text-muted d-block mt-1">
-                    {config.gradeLevel}
-                  </small>
-                </div>
+              <div className="d-flex w-100 justify-content-between">
+                <h5 className="mb-1">{project.name}</h5>
+                <small className="text-muted">{project.modelName}</small>
               </div>
+              <p className="mb-1 text-truncate">{project.description}</p>
+              <small className="text-muted">
+                Created {new Date(project.createdAt).toLocaleDateString()}
+              </small>
             </button>
-          );
-        })}
-
-        {projects.length === 0 && !isCreating && (
-          <div className="list-group-item text-center text-muted py-4">
-            <i className="bi bi-folder-plus display-4"></i>
-            <p className="mt-2">No projects yet. Create your first project!</p>
-          </div>
-        )}
-      </div>
-
-      {isCreating && (
-        <ProjectForm 
-          onClose={() => setIsCreating(false)}
-          onSuccess={() => {
-            setIsCreating(false);
-            refreshProjects();
-          }}
-        />
+          ))}
+        </div>
       )}
     </div>
   );

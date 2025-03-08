@@ -12,6 +12,7 @@ import { MaterialSource } from './types/index.js';
 import fs from 'fs/promises';
 import { DatabaseService } from './services/DatabaseService.js';
 import { StorageService } from './services/StorageService.js';
+import { v4 as uuid } from 'uuid';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -45,21 +46,40 @@ const upload = multer({ storage: storageMulter });
 
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
-    const { question, answer, rubric } = req.body;
+    const { questionId, answer } = req.body;
     
-    if (!question || !answer || !rubric) {
+    if (!questionId || !answer) {
       res.status(400).json({ 
         error: 'Missing required fields',
         details: {
-          question: !question,
-          answer: !answer,
-          rubric: !rubric
+          questionId: !questionId,
+          answer: !answer
         }
       });
       return;
     }
 
-    const result = await validator.validateResponse(question, answer, rubric);
+    // Retrieve the question from database
+    const question = await db.getQuestion(questionId);
+    if (!question) {
+      res.status(404).json({ error: 'Question not found' });
+      return;
+    }
+    
+    // Get the prompt template using the ID from the question
+    const promptTemplate = await db.getPromptTemplate(question.promptTemplateId);
+    if (!promptTemplate) {
+      res.status(404).json({ error: 'Prompt template not found' });
+      return;
+    }
+
+    // Validate the answer using the retrieved data and prompt template
+    const result = await validator.validateResponse(
+      question.question,
+      answer,
+      promptTemplate
+    );
+    
     res.json(result);
   } catch (error) {
     console.error('Validation error:', error);
@@ -72,31 +92,86 @@ app.post('/api/validate', async (req, res): Promise<void> => {
 
 app.post('/api/generate', async (req, res): Promise<void> => {
   try {
-    const { template, rules, context } = req.body;
+    const { materialId, promptTemplateId, templateIndex, useSourceLanguage } = req.body;
     
-    if (!template || !rules || !context) {
+    if (!materialId || !promptTemplateId || templateIndex === undefined) {
       res.status(400).json({ 
         error: 'Missing required fields',
         details: {
-          template: !template,
-          rules: !rules,
-          context: !context
+          materialId: !materialId,
+          promptTemplateId: !promptTemplateId,
+          templateIndex: templateIndex === undefined
         }
       });
       return;
     }
 
-    // Generate question using the template and context
-    const question = await materialProcessor.generateQuestion(
-      template, 
-      context,
-      req.body.useSourceLanguage
+    // Retrieve material from database
+    const material = await db.getMaterial(materialId);
+    if (!material) {
+      res.status(404).json({ error: 'Material not found' });
+      return;
+    }
+    
+    // Retrieve prompt template from database
+    const promptTemplate = await db.getPromptTemplate(promptTemplateId);
+    if (!promptTemplate) {
+      res.status(404).json({ error: 'Prompt template not found' });
+      return;
+    }
+    
+    // Get the question template from the material's metadata
+    const questionTemplate = material.metadata?.templates?.[templateIndex];
+    if (!questionTemplate) {
+      res.status(404).json({ error: 'Question template not found at specified index' });
+      return;
+    }
+
+    // Generate question using the material's content and templates
+    const questionText = await materialProcessor.generateQuestion(
+      questionTemplate, 
+      material.content,
+      promptTemplate,
+      useSourceLanguage
     );
     
+    // Generate appropriate rules based on the prompt template
+    const rubric = await materialProcessor.generateRubric(
+      questionText,
+      questionTemplate,
+      promptTemplate
+    );
+    
+    // Generate a UUID for the question
+    const questionId = uuid();
+    
+    // Save to database
+    await db.createQuestion({
+      materialId,
+      promptTemplateId,
+      question: questionText,
+      template: JSON.stringify(questionTemplate),
+      rules: JSON.stringify(rubric),
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        templateIndex,
+        validationStages: ['content_relevance', 'vocabulary_appropriateness', 'detailed_criteria_evaluation']
+      }
+    });
+    
+    // Return the complete question with its ID
     res.json({ 
-      question,
-      template,
-      rules
+      id: questionId,
+      materialId,
+      promptTemplateId,
+      question: questionText,
+      template: questionTemplate,
+      rubric,
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        templateIndex,
+        validationStages: ['content_relevance', 'vocabulary_appropriateness', 'detailed_criteria_evaluation']
+      }
     });
   } catch (error) {
     console.error('Generation error:', error);
@@ -124,14 +199,53 @@ app.get('/api/health', async (_req, res): Promise<void> => {
 });
 
 app.post('/api/materials/process', async (req, res): Promise<void> => {
-  const { material } = req.body;
+  const { material, projectId } = req.body;
+  
+  if (!projectId) {
+    res.status(400).json({ error: 'Project ID is required' });
+    return;
+  }
   
   try {
-    const content = await materialProcessor.extractContent(material);
-    const objectives = await materialProcessor.extractLearningObjectives(content, material.metadata.focusArea);
-    const templates = await materialProcessor.suggestQuestionTemplates(content, objectives, material.metadata.focusArea);
+    // Extract content if not already provided
+    const content = typeof material.content === 'string' && !material.content.startsWith('/') 
+      ? material.content 
+      : await materialProcessor.extractContent(material);
+    
+    // Generate objectives and templates
+    const objectives = await materialProcessor.extractLearningObjectives(
+      content, 
+      material.metadata.focusArea,
+      material.metadata.useSourceLanguage
+    );
+    
+    const templates = await materialProcessor.suggestQuestionTemplates(
+      content, 
+      objectives, 
+      material.metadata.focusArea,
+      material.metadata.useSourceLanguage
+    );
+    
+    // Create database record for the material
+    const materialId = await db.createMaterial({
+      projectId,
+      title: material.metadata.title || 'Untitled Material',
+      content: content,
+      focusArea: material.metadata.focusArea,
+      metadata: {
+        ...material.metadata,
+        learningObjectives: objectives,
+        templates: templates,
+        wordCount: content.split(/\s+/).length,
+        processedAt: new Date().toISOString()
+      }
+    });
+    
+    // Update material status to completed
+    await db.updateMaterialStatus(materialId, 'completed');
     
     res.json({
+      id: materialId,
       objectives,
       templates,
       wordCount: content.split(/\s+/).length,
@@ -166,34 +280,66 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
     }
 
     const metadata = JSON.parse(req.body.metadata || '{}');
+    const projectId = metadata.projectId || null;
+    
+    if (!projectId) {
+      res.status(400).json({ error: 'Project ID is required' });
+      return;
+    }
+
+    // Extract content from file
     const material: MaterialSource = {
       type: fileType,
       content: req.file.path,
       metadata
     };
-
-    // Process file only once
+    
+    // Process file to extract content
     const content = await materialProcessor.extractContent(material);
     
-    // Clean up the uploaded file after processing
-    await fs.unlink(req.file.path).catch(err => {
-      console.warn('Failed to delete uploaded file:', err);
-    });
-
-    // Get objectives and templates using focusArea
+    // Generate objectives and templates
     const objectives = await materialProcessor.extractLearningObjectives(
       content, 
       metadata.focusArea,
       metadata.useSourceLanguage
     );
+    
     const templates = await materialProcessor.suggestQuestionTemplates(
       content, 
       objectives, 
       metadata.focusArea,
       metadata.useSourceLanguage
     );
+
+    // Create database record for the material
+    const materialId = await db.createMaterial({
+      projectId,
+      title: metadata.title || 'Untitled Material',
+      content: content,
+      focusArea: metadata.focusArea,
+      filePath: req.file.path,
+      fileType,
+      fileSize: req.file.size,
+      metadata: {
+        ...metadata,
+        learningObjectives: objectives,
+        templates: templates,
+        wordCount: content.split(/\s+/).length,
+        processedAt: new Date().toISOString()
+      }
+    });
     
+    // Update material status to completed
+    await db.updateMaterialStatus(materialId, 'completed');
+    
+    // Clean up the uploaded file if needed (since we've already extracted the content)
+    // Uncomment this if you don't need the original file anymore
+    // await fs.unlink(req.file.path).catch(err => {
+    //   console.warn('Failed to delete uploaded file:', err);
+    // });
+
     res.json({
+      id: materialId,
       content,
       objectives,
       templates,
@@ -330,14 +476,23 @@ app.delete('/api/materials/:id', async (req, res): Promise<void> => {
 // Add question endpoints
 app.get('/api/questions', async (req, res): Promise<void> => {
   try {
-    const materialId = req.query.materialId as string;
+    const { materialId } = req.query;
+    
     if (!materialId) {
-      res.status(400).json({ error: 'Missing materialId parameter' });
+      res.status(400).json({ error: 'Material ID is required' });
       return;
     }
     
-    const questions = await db.getMaterialQuestions(materialId);
-    res.json(questions);
+    const questions = await db.getQuestionsByMaterial(materialId as string);
+    res.json(questions.map(q => ({
+      id: q.id,
+      materialId: q.materialId,
+      promptTemplateId: q.promptTemplateId,
+      question: q.question,
+      template: q.template,
+      rubric: q.rubric,
+      metadata: q.metadata
+    })));
   } catch (error) {
     console.error('Failed to get questions:', error);
     res.status(500).json({ 
@@ -349,10 +504,10 @@ app.get('/api/questions', async (req, res): Promise<void> => {
 
 app.post('/api/questions', async (req, res): Promise<void> => {
   try {
-    const { materialId, promptTemplateId, question, constraints, metadata } = req.body;
+    const { materialId, promptTemplateId, question, metadata } = req.body;
     
     if (!materialId || !promptTemplateId || !question) {
-      res.status(400).json({ 
+      res.status(400).json({
         error: 'Missing required fields',
         details: {
           materialId: !materialId,
@@ -363,20 +518,28 @@ app.post('/api/questions', async (req, res): Promise<void> => {
       return;
     }
     
+    // Use the DatabaseService createQuestion method
     const questionId = await db.createQuestion({
       materialId,
       promptTemplateId,
       question,
-      constraints: constraints || {},
-      metadata: metadata || {}
+      template: JSON.stringify({}),  // Empty template object since we're not using it anymore
+      rules: JSON.stringify({}),     // Empty rules object since we're not using it anymore
+      metadata
     });
     
-    const createdQuestion = await db.getQuestion(questionId);
-    res.json(createdQuestion);
+    // Return the saved question with its ID
+    res.json({
+      id: questionId,
+      materialId,
+      promptTemplateId,
+      question,
+      metadata: metadata || {}
+    });
   } catch (error) {
-    console.error('Failed to create question:', error);
-    res.status(500).json({ 
-      error: 'Failed to create question',
+    console.error('Error saving question:', error);
+    res.status(500).json({
+      error: 'Failed to save question',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -431,6 +594,154 @@ app.post('/api/responses', async (req, res): Promise<void> => {
     console.error('Failed to create response:', error);
     res.status(500).json({ 
       error: 'Failed to create response',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Add this endpoint to handle material content updates
+app.patch('/api/materials/:id/content', async (req, res): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    
+    if (!content) {
+      res.status(400).json({ error: 'Content is required' });
+      return;
+    }
+    
+    // Get the existing material
+    const material = await db.getMaterial(id);
+    
+    // Update just the content
+    await db.updateMaterialContent(id, content);
+    
+    // Return the updated material
+    const updatedMaterial = await db.getMaterial(id);
+    res.json(updatedMaterial);
+  } catch (error) {
+    console.error('Error updating material content:', error);
+    res.status(500).json({ 
+      error: 'Failed to update material content',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Add this endpoint to update material title
+app.patch('/api/materials/:id/title', async (req, res): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { title } = req.body;
+    
+    if (!title) {
+      res.status(400).json({ error: 'Title is required' });
+      return;
+    }
+    
+    await db.updateMaterialTitle(id, title);
+    
+    // Return the updated material
+    const updatedMaterial = await db.getMaterial(id);
+    res.json(updatedMaterial);
+  } catch (error) {
+    console.error('Error updating material title:', error);
+    res.status(500).json({ 
+      error: 'Failed to update material title',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Add this endpoint to re-upload and reprocess a material
+app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
+    }
+    
+    // Get original material to preserve metadata
+    const originalMaterial = await db.getMaterial(id);
+    if (!originalMaterial) {
+      res.status(404).json({ error: 'Material not found' });
+      return;
+    }
+    
+    // Get file extension without the dot
+    const fileType = path.extname(req.file.originalname).toLowerCase().substring(1);
+    
+    if (!['txt', 'pdf', 'doc', 'docx', 'md'].includes(fileType)) {
+      res.status(400).json({ 
+        error: 'Unsupported file type', 
+        details: `File type ${fileType} is not supported. Supported types: txt, pdf, doc, docx, md` 
+      });
+      return;
+    }
+    
+    // Extract content from new file
+    const material = {
+      type: fileType,
+      content: req.file.path,
+      metadata: {
+        ...originalMaterial.metadata,
+        focusArea: originalMaterial.focusArea,
+        projectId: originalMaterial.projectId
+      }
+    };
+    
+    // Process file to extract content
+    const content = await materialProcessor.extractContent(material);
+    
+    // Generate objectives and templates
+    const objectives = await materialProcessor.extractLearningObjectives(
+      content, 
+      originalMaterial.focusArea,
+      originalMaterial.metadata?.useSourceLanguage
+    );
+    
+    const templates = await materialProcessor.suggestQuestionTemplates(
+      content, 
+      objectives, 
+      originalMaterial.focusArea,
+      originalMaterial.metadata?.useSourceLanguage
+    );
+    
+    // Update the material with new content and processed data
+    await db.updateMaterialReprocessed({
+      id,
+      content,
+      filePath: req.file.path,
+      fileType,
+      fileSize: req.file.size,
+      metadata: {
+        ...originalMaterial.metadata,
+        learningObjectives: objectives,
+        templates: templates,
+        wordCount: content.split(/\s+/).length,
+        processedAt: new Date().toISOString()
+      }
+    });
+    
+    // Update material status to completed
+    await db.updateMaterialStatus(id, 'completed');
+    
+    // Return the updated material
+    const updatedMaterial = await db.getMaterial(id);
+    res.json({
+      id,
+      content,
+      objectives,
+      templates,
+      wordCount: content.split(/\s+/).length,
+      status: 'success'
+    });
+  } catch (error) {
+    console.error('Material reprocessing error:', error);
+    res.status(500).json({ 
+      error: 'Failed to reprocess material',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

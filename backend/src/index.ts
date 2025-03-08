@@ -276,6 +276,163 @@ app.post('/api/prompt-templates', async (req, res): Promise<void> => {
   }
 });
 
+// Add materials endpoints
+app.get('/api/materials', async (req, res): Promise<void> => {
+  try {
+    const projectId = req.query.projectId as string;
+    if (!projectId) {
+      res.status(400).json({ error: 'Missing projectId parameter' });
+      return;
+    }
+    
+    const materials = await db.getProjectMaterials(projectId);
+    res.json(materials);
+  } catch (error) {
+    console.error('Failed to get materials:', error);
+    res.status(500).json({ 
+      error: 'Failed to get materials',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+app.get('/api/materials/:id', async (req, res): Promise<void> => {
+  try {
+    const id = req.params.id;
+    const material = await db.getMaterial(id);
+    res.json(material);
+  } catch (error) {
+    console.error('Failed to get material:', error);
+    res.status(500).json({ 
+      error: 'Failed to get material',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+app.delete('/api/materials/:id', async (req, res): Promise<void> => {
+  try {
+    const id = req.params.id;
+    await db.deleteMaterial(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete material:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete material',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Add question endpoints
+app.get('/api/questions', async (req, res): Promise<void> => {
+  try {
+    const materialId = req.query.materialId as string;
+    if (!materialId) {
+      res.status(400).json({ error: 'Missing materialId parameter' });
+      return;
+    }
+    
+    const questions = await db.getMaterialQuestions(materialId);
+    res.json(questions);
+  } catch (error) {
+    console.error('Failed to get questions:', error);
+    res.status(500).json({ 
+      error: 'Failed to get questions',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+app.post('/api/questions', async (req, res): Promise<void> => {
+  try {
+    const { materialId, promptTemplateId, question, constraints, metadata } = req.body;
+    
+    if (!materialId || !promptTemplateId || !question) {
+      res.status(400).json({ 
+        error: 'Missing required fields',
+        details: {
+          materialId: !materialId,
+          promptTemplateId: !promptTemplateId,
+          question: !question
+        }
+      });
+      return;
+    }
+    
+    const questionId = await db.createQuestion({
+      materialId,
+      promptTemplateId,
+      question,
+      constraints: constraints || {},
+      metadata: metadata || {}
+    });
+    
+    const createdQuestion = await db.getQuestion(questionId);
+    res.json(createdQuestion);
+  } catch (error) {
+    console.error('Failed to create question:', error);
+    res.status(500).json({ 
+      error: 'Failed to create question',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Add response endpoints
+app.get('/api/responses', async (req, res): Promise<void> => {
+  try {
+    const questionId = req.query.questionId as string;
+    if (!questionId) {
+      res.status(400).json({ error: 'Missing questionId parameter' });
+      return;
+    }
+    
+    const responses = await db.getQuestionResponses(questionId);
+    res.json(responses);
+  } catch (error) {
+    console.error('Failed to get responses:', error);
+    res.status(500).json({ 
+      error: 'Failed to get responses',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+app.post('/api/responses', async (req, res): Promise<void> => {
+  try {
+    const { questionId, response, score, feedback, metadata } = req.body;
+    
+    if (!questionId || !response) {
+      res.status(400).json({ 
+        error: 'Missing required fields',
+        details: {
+          questionId: !questionId,
+          response: !response
+        }
+      });
+      return;
+    }
+    
+    const responseId = await db.createResponse({
+      questionId,
+      response,
+      score,
+      feedback,
+      metadata: metadata || {}
+    });
+    
+    const createdResponse = await db.getResponse(responseId);
+    res.json(createdResponse);
+  } catch (error) {
+    console.error('Failed to create response:', error);
+    res.status(500).json({ 
+      error: 'Failed to create response',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

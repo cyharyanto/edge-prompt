@@ -34,6 +34,7 @@ export interface EvaluationState {
 }
 
 export interface MaterialSource {
+  id?: string;
   type: string;
   content: string;
   metadata: {
@@ -41,6 +42,10 @@ export interface MaterialSource {
     subject?: string;
     grade?: string;
     chapter?: string;
+    focusArea: string;
+    useSourceLanguage?: boolean;
+    learningObjectives?: string[];
+    templates?: ContentTemplate[];
     [key: string]: any;
   };
 }

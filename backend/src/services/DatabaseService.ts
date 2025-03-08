@@ -320,4 +320,142 @@ export class DatabaseService {
     const stmt = this.db.prepare(`PRAGMA table_info(${tableName})`);
     return stmt.all() as ColumnInfo[];
   }
+
+  // Question methods
+  async getMaterialQuestions(materialId: string) {
+    const stmt = this.db.prepare(`
+      SELECT * FROM generated_questions 
+      WHERE material_id = ?
+      ORDER BY created_at DESC
+    `);
+    
+    const questions = stmt.all(materialId) as any[];
+    return questions.map(q => ({
+      id: q.id,
+      materialId: q.material_id,
+      promptTemplateId: q.prompt_template_id,
+      question: q.question,
+      constraints: JSON.parse(q.constraints || '{}'),
+      metadata: JSON.parse(q.metadata || '{}'),
+      createdAt: q.created_at
+    }));
+  }
+
+  async getQuestion(id: string) {
+    const stmt = this.db.prepare(`
+      SELECT * FROM generated_questions 
+      WHERE id = ?
+    `);
+    
+    const q = stmt.get(id) as any;
+    if (!q) {
+      throw new Error(`Question not found: ${id}`);
+    }
+    
+    return {
+      id: q.id,
+      materialId: q.material_id,
+      promptTemplateId: q.prompt_template_id,
+      question: q.question,
+      constraints: JSON.parse(q.constraints || '{}'),
+      metadata: JSON.parse(q.metadata || '{}'),
+      createdAt: q.created_at
+    };
+  }
+
+  async createQuestion(params: {
+    materialId: string;
+    promptTemplateId: string;
+    question: string;
+    constraints?: any;
+    metadata?: any;
+  }) {
+    const stmt = this.db.prepare(`
+      INSERT INTO generated_questions (
+        id, material_id, prompt_template_id, question, constraints, metadata
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const id = uuid();
+    stmt.run(
+      id,
+      params.materialId,
+      params.promptTemplateId,
+      params.question,
+      params.constraints ? JSON.stringify(params.constraints) : null,
+      params.metadata ? JSON.stringify(params.metadata) : null
+    );
+    
+    return id;
+  }
+
+  // Response methods
+  async getQuestionResponses(questionId: string) {
+    const stmt = this.db.prepare(`
+      SELECT * FROM responses 
+      WHERE question_id = ?
+      ORDER BY created_at DESC
+    `);
+    
+    const responses = stmt.all(questionId) as any[];
+    return responses.map(r => ({
+      id: r.id,
+      questionId: r.question_id,
+      response: r.response,
+      score: r.score,
+      feedback: r.feedback,
+      metadata: JSON.parse(r.metadata || '{}'),
+      createdAt: r.created_at
+    }));
+  }
+
+  async getResponse(id: string) {
+    const stmt = this.db.prepare(`
+      SELECT * FROM responses 
+      WHERE id = ?
+    `);
+    
+    const r = stmt.get(id) as any;
+    if (!r) {
+      throw new Error(`Response not found: ${id}`);
+    }
+    
+    return {
+      id: r.id,
+      questionId: r.question_id,
+      response: r.response,
+      score: r.score,
+      feedback: r.feedback,
+      metadata: JSON.parse(r.metadata || '{}'),
+      createdAt: r.created_at
+    };
+  }
+
+  async createResponse(params: {
+    questionId: string;
+    response: string;
+    score?: number;
+    feedback?: string;
+    metadata?: any;
+  }) {
+    const stmt = this.db.prepare(`
+      INSERT INTO responses (
+        id, question_id, response, score, feedback, metadata
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const id = uuid();
+    stmt.run(
+      id,
+      params.questionId,
+      params.response,
+      params.score || null,
+      params.feedback || null,
+      params.metadata ? JSON.stringify(params.metadata) : null
+    );
+    
+    return id;
+  }
 } 

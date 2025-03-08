@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { Template, ValidationRule, MaterialSource, ContentTemplate } from '../../../../backend/src/types';
 import { MaterialUploader } from './MaterialUploader';
+import { api } from '../../services/api';
+import { useProject } from '../../contexts/ProjectContext';
 
 interface Props {
   onGenerate: (template: Template, rules: ValidationRule) => void;
+  projectId?: string;
 }
 
-export const ContentGenerator: React.FC<Props> = ({ onGenerate }) => {
+export const ContentGenerator: React.FC<Props> = ({ onGenerate, projectId }) => {
+  const { activeProject, promptTemplates } = useProject();
   const [activeTab, setActiveTab] = useState<'teacher' | 'student'>('teacher');
   const [template, setTemplate] = useState<Template>({
     pattern: '',
@@ -20,14 +24,18 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate }) => {
     }
   });
   const [uploadedContent, setUploadedContent] = useState<{
+    id?: string;
     content: string;
     objectives: string[];
     templates: ContentTemplate[];
     wordCount: number;
+    useSourceLanguage?: boolean;
   } | null>(null);
+  const [generatedQuestionId, setGeneratedQuestionId] = useState<string | null>(null);
   const [studentAnswer, setStudentAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
+    id?: string;
     score?: number;
     feedback?: string;
     error?: string;
@@ -36,10 +44,12 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate }) => {
 
   const handleMaterialLoad = (material: MaterialSource) => {
     setUploadedContent({
+      id: material.id,
       content: material.content,
       objectives: material.metadata.learningObjectives || [],
       templates: material.metadata.templates || [],
-      wordCount: material.content.split(/\s+/).length
+      wordCount: material.content.split(/\s+/).length,
+      useSourceLanguage: material.metadata.useSourceLanguage || false
     });
 
     if (material.metadata.templates?.length) {
@@ -52,7 +62,7 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate }) => {
   };
 
   const handleAnswerSubmit = async () => {
-    if (!studentAnswer.trim()) {
+    if (!studentAnswer.trim() || !generatedQuestionId) {
       return;
     }
 
@@ -60,24 +70,26 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate }) => {
     setFeedback(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question: template.pattern,
-          answer: studentAnswer,
-          rubric: rules
-        }),
+      const validationResult = await api.validateResponse(
+        template.pattern,
+        studentAnswer,
+        rules
+      );
+
+      const responseData = await api.saveResponse({
+        questionId: generatedQuestionId,
+        response: studentAnswer,
+        score: validationResult.score,
+        feedback: validationResult.feedback,
+        metadata: {
+          isValid: validationResult.isValid
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Validation failed');
-      }
-
-      const result = await response.json();
-      setFeedback(result);
+      setFeedback({
+        id: responseData.id,
+        ...validationResult
+      });
     } catch (error) {
       setFeedback({
         error: error instanceof Error ? error.message : 'Failed to validate answer'
@@ -89,39 +101,39 @@ export const ContentGenerator: React.FC<Props> = ({ onGenerate }) => {
 
   const handleGenerateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!template.pattern) {
-      alert('Please select or enter a question template');
+    if (!template.pattern || !uploadedContent?.id) {
+      alert('Please select or enter a question template and upload material');
       return;
     }
 
     setIsGenerating(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          template,
-          rules,
-          context: uploadedContent?.content || ''
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate question');
-      }
-
-      const result = await response.json();
+      const result = await api.generateQuestion(
+        template,
+        rules,
+        uploadedContent.content,
+        uploadedContent.useSourceLanguage
+      );
       
-      // Update template with generated question
+      const questionData = await api.saveQuestion({
+        materialId: uploadedContent.id,
+        promptTemplateId: activeProject?.promptTemplateId || promptTemplates[0]?.id,
+        question: result.question,
+        constraints: template.constraints,
+        metadata: {
+          template: template.pattern,
+          rules: rules
+        }
+      });
+      
+      setGeneratedQuestionId(questionData.id);
+      
       setTemplate({
         ...template,
         pattern: result.question
       });
 
-      // Switch to student interface
       setActiveTab('student');
     } catch (error) {
       console.error('Generation error:', error);

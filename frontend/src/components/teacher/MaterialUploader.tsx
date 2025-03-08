@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { MaterialSource, ContentTemplate } from '../../../../backend/src/types';
+import { api } from '../../services/api';
 
 interface Props {
   onMaterialLoad: (material: MaterialSource) => void;
+  projectId?: string;
 }
 
 interface Metadata {
@@ -16,7 +18,7 @@ interface Metadata {
   templates?: ContentTemplate[];
 }
 
-export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad }) => {
+export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const focusAreaRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -73,18 +75,16 @@ export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('metadata', JSON.stringify(metadata));
+      
+      // Add projectId to metadata if available
+      const metadataWithProject = projectId 
+        ? { ...metadata, projectId } 
+        : metadata;
+      
+      formData.append('metadata', JSON.stringify(metadataWithProject));
 
-      const response = await fetch('http://localhost:3001/api/materials/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      // Use API client instead of direct fetch
+      const result = await api.uploadMaterial(formData);
       
       // Create MaterialSource object with the file extension as type
       const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
@@ -98,7 +98,7 @@ export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad }) => {
         }
       });
 
-      // Clear form using the new resetForm function
+      // Clear form
       resetForm();
     } catch (error) {
       console.error('Upload error:', error);

@@ -54,7 +54,6 @@ export const ProjectView: React.FC<Props> = ({ project, onUpdate }) => {
               onClick={() => setIsEditing(true)}
             >
               <i className="bi bi-pencil me-1"></i>
-              Edit
             </button>
             <button 
               className="btn btn-sm btn-outline-danger"

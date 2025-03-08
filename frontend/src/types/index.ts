@@ -42,4 +42,19 @@ export interface ValidationRule {
       max: number;
     };
   };
+}
+
+export interface Material {
+  id: string;
+  projectId: string;
+  projectName: string;
+  title: string;
+  content: string;
+  focusArea: string;
+  filePath?: string;
+  fileType?: string;
+  fileSize?: number;
+  status: string;
+  metadata?: any;
+  createdAt: string;
 } 

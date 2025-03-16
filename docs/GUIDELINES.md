@@ -1,3 +1,34 @@
+# EdgePrompt Guidelines: Introduction
+
+## Purpose & Vision
+
+The EdgePrompt Guidelines presented in this document serve as the definitive north star for our team's work. These principles articulate the foundational vision, core architectural approach, and philosophical underpinnings that must guide all aspects of the EdgePrompt project.
+
+## How to Use These Guidelines
+
+**For All Team Members:**
+- Return to these guidelines regularly to ensure your work remains aligned with our core mission
+- When faced with implementation decisions, consult these questions to guide your approach
+- Use these principles to evaluate whether potential solutions truly advance our fundamental goals
+- Reference specific sections when documenting technical decisions to maintain traceability to our guiding principles
+
+**For Technical Implementation:**
+- The documentation scaffolding provides practical structure for implementation, but all technical decisions must be validated against these guidelines
+- When technical constraints create tension with these principles, elevate the discussion rather than compromising core values
+- Security, educational equity, and universal applicability should never be sacrificed for technical expediency
+
+## Relationship to Other Documents
+
+- **Guidelines (This Document)**: The why and foundational principles - our north star
+- **Implementation Scaffolding**: The how and practical structure - our roadmap
+- **Technical Documentation**: The what and specific implementation - our execution
+
+## Maintaining Fidelity to Our Vision
+
+The ultimate success of EdgePrompt will be measured by its ability to bring AI-enhanced education to environments previously excluded due to resource constraints. Every line of code, every design decision, and every implementation choice should advance this mission.
+
+The question-based format of these guidelines is intentional - it encourages continuous reflection and ensures we never lose sight of why we're building EdgePrompt. Let these questions guide your thinking, challenge your assumptions, and inspire innovative solutions that truly achieve our vision of universal, safe, and equitable AI-enhanced education.
+
 # EdgePrompt: Universal Guardrails for AI-Enhanced Education in Resource-Constrained Environments
 
 ## 1. First Principles & Educational Equity

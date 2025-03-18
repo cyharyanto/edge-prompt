@@ -7,6 +7,7 @@ import { PromptTemplateManager } from './components/prompt/PromptTemplateManager
 import PromptEngineeringTool from './components/tools/PromptEngineeringTool';
 import { api } from './services/api';
 import { Material } from './types';
+import { ProjectForm } from './components/project/ProjectForm';
 
 // Main content wrapper that uses the project context
 const MainContent: React.FC = () => {
@@ -16,6 +17,7 @@ const MainContent: React.FC = () => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+  const [showCreateProject, setShowCreateProject] = useState(false);
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -134,7 +136,7 @@ const MainContent: React.FC = () => {
                   <p className="text-muted">No projects found</p>
                   <button 
                     className="btn btn-sm btn-primary"
-                    onClick={() => {/* Open project creation modal */}}
+                    onClick={() => setShowCreateProject(true)}
                   >
                     <i className="bi bi-plus-circle me-1"></i>
                     Create Project
@@ -261,6 +263,37 @@ const MainContent: React.FC = () => {
           {getMainContent()}
         </div>
       </div>
+
+      {showCreateProject && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Create New Project</h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowCreateProject(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <ProjectForm 
+                  onSuccess={() => {
+                    setShowCreateProject(false);
+                    // Refresh projects list
+                    api.getProjects().then(projectsData => {
+                      if (projectsData.length > 0) {
+                        setActiveProject(projectsData[0]);
+                      }
+                    });
+                  }}
+                  onClose={() => setShowCreateProject(false)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

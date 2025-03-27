@@ -172,6 +172,10 @@ edge-prompt/
 - Detailed feedback generation
 - Language-matched response evaluation
 
+## Documentation
+
+For detailed project guidelines, architecture documentation, and implementation considerations, see the [documentation folder](./docs/README.md).
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.

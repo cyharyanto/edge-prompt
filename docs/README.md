@@ -8,6 +8,7 @@ EdgePrompt is a secure framework for implementing pragmatic guardrails for Large
 
 ## Documentation Structure
 - [Architecture Analysis](ARCHITECTURE.md) - System architecture and component relationships
+- [Implementation Design](DESIGN.md) - Practical implementation details and developer reference
 - [Prompting Pipeline](PROMPTING_PIPELINE.md) - Analysis of the multi-stage validation pipeline
 - [Technical Requirements](TECHNICAL_REQUIREMENTS.md) - Comprehensive technical specifications
 - [Edge Deployment](EDGE_DEPLOYMENT.md) - Considerations for resource-constrained environments

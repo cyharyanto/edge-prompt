@@ -55,6 +55,8 @@ The question-based format of these guidelines is intentional - it encourages con
 
 **Answer:** The neural-symbolic approach creates enduring safety through sound mapping between symbolic rules and neural networks [2]. EdgePrompt implements this through rigidly structured question generation and validation pipelines that leverage both cloud and edge LLMs for distinct operational roles, enforcing safety through multi-stage template validation, explicit constraint propagation, and formalized evaluation protocols [1]. This creates safety boundaries that operate independently from specific implementations and remain consistent across different model architectures.
 
+The neural-symbolic approach improves safety and reasoning by combining neural networks' pattern recognition with symbolic systems' interpretability and logical consistency. As demonstrated in the Code Prompting method, this integration enables LLMs to generate and follow structured code as symbolic solvers, reducing complex reasoning tasks into smaller, well-defined sub-tasks [6]. This structured decomposition creates more robust guardrails that remain effective across different model architectures while improving reasoning capabilities [6]. Neural-symbolic guardrails can effectively filter inputs and outputs of LLMs to mitigate risks while maintaining model capabilities, with learning agents and symbolic agents collaborating to process content according to well-defined safety boundaries [7].
+
 - Why will the tension between model capability and safety constraints persist despite AI advancement?
 
 **Answer:** This tension persists because increased AI capability heightens interpretability and accountability requirements. As systems outperform humans in more domains, ethical and societal concerns intensify [2]. The fundamental tension between capability and safety is inherent to AI advancement, requiring ongoing safety constraint evolution regardless of model capabilities. EdgePrompt addresses this through its approach to guardrails that maintain safety without compromising model capabilities in connectivity-constrained environments [1].
@@ -66,11 +68,11 @@ The question-based format of these guidelines is intentional - it encourages con
 
 - What universal pedagogical principles guide the balance between safety and educational utility?
 
-**Answer:** Key principles include supporting productive struggle without circumvention, enhancing rather than replacing proven practices, aligning with developmental readiness, and augmenting teacher expertise [2]. EdgePrompt operationalizes these principles through a multi-stage validation framework that includes constraint checking, staged response validation, and boundary enforcement, ensuring that AI tools maintain both safety and educational utility across different contexts [1].
+**Answer:** Key principles include supporting productive struggle without circumvention, enhancing rather than replacing proven practices, aligning with developmental readiness, and augmenting teacher expertise [2]. EdgePrompt operationalizes these principles through a multi-stage validation framework that includes constraint checking, staged response validation, and boundary enforcement, ensuring that AI tools maintain both safety and educational utility across different contexts [1]. This approach acknowledges the inherent tension between safety and intelligence/creativity in AI systems, requiring careful balancing of conflicting requirements when developing guardrails for educational contexts [7]. The design of effective guardrails must consider how to maintain exploratory depth in responses while implementing necessary safety boundaries.
 
 - Why must teacher autonomy remain central despite evolving AI capabilities?
 
-**Answer:** Teacher autonomy remains essential because effective AI integration depends on educators' knowledge of individual students and ability to match them with appropriate content and support [2]. EdgePrompt preserves this autonomy through its teacher review system with response analysis, edge case detection, review triggers, and system adaptation capabilities [1], enabling teachers to maintain control over the educational process while benefiting from AI assistance.
+**Answer:** Teacher autonomy remains essential because effective AI integration depends on educators' knowledge of individual students and ability to match them with appropriate content and support [2]. EdgePrompt preserves this autonomy through its teacher review system with response analysis, edge case detection, review triggers, and system adaptation capabilities [1], enabling teachers to maintain control over the educational process while benefiting from AI assistance. This aligns with the broader need for a multidisciplinary approach to AI safeguards, where domain experts (in this case, educators) play a critical role in determining appropriate parameters for AI systems in their specific contexts [7]. Teacher involvement ensures that guardrails reflect educational values and domain-specific expertise rather than general, context-free constraints.
 
 ## 2. Neural-Symbolic Framework Architecture
 
@@ -78,6 +80,8 @@ The question-based format of these guidelines is intentional - it encourages con
 - How do formal constraint patterns create transferable safety boundaries across different LLMs?
 
 **Answer:** Formal constraint patterns create transferable safety through neural-symbolic integration mapping symbolic knowledge to neural computation. This cornerstone provides a mechanism between symbolism and connectionism [2], allowing diverse knowledge representation formalisms to serve as background for large-scale learning and reasoning, establishing consistent safety boundaries across LLMs. EdgePrompt implements this through structured prompting that combines template processing with explicit constraint patterns and validation rules that maintain consistency across different model architectures [1].
+
+Code prompting demonstrates how formal constraint patterns can create transferable safety by transforming complex reasoning tasks into explicitly structured computational steps. When LLMs generate code as intermediate reasoning steps, they benefit from the unambiguous representation and task decomposition inherent in programming languages, which reduces confusion and creates more robust safety boundaries that function across different model architectures [6]. This approach leads to more consistent performance on reasoning tasks and better generalization to more complex problems [6].
 
 - What verification principles ensure consistent safety regardless of underlying model or language?
 
@@ -87,10 +91,12 @@ The question-based format of these guidelines is intentional - it encourages con
 
 **Answer:** Multi-stage validation remains necessary because integrating learning and reasoning requires validation across levels. Neural-symbolic systems bridge lower-level information processing and higher-level abstract knowledge [2], necessitating validation at each level to ensure safety and correctness regardless of model capability advancement. EdgePrompt's implementation of staged response validation with explicit boundary conditions [1] addresses this requirement, ensuring that safety is maintained across different levels of model capability.
 
+The Code Prompting approach demonstrates why multi-stage validation remains essential by showing that even as LLMs become more capable, they benefit from structured decomposition and explicit verification steps. The two-stage process (code generation followed by execution/reasoning) allows for better task planning and reasonable task reduction while eliminating ambiguity that can confuse even advanced models [6]. This multi-stage approach provides explicit templates that guide reasoning, improving performance especially as problems become more complex [6].
+
 ### Universal Educational Workflows
 - How does the framework support diverse curricula, languages, and educational systems?
 
-**Answer:** The framework supports diversity through principles addressing multilingual learners and cultural variations. It recognizes productive struggle in translanguaging contexts where students move between languages [2]. EdgePrompt's implementation targets specific educational contexts such as Grade 5 language instruction in Indonesia's 3T regions [1] while maintaining a flexible architecture that can be adapted to diverse curricula, languages, and educational systems through its structured template approach.
+**Answer:** The framework supports diversity through principles addressing multilingual learners and cultural variations. It recognizes productive struggle in translanguaging contexts where students move between languages [2]. EdgePrompt's implementation targets specific educational contexts such as Grade 5 language instruction in Indonesia's 3T regions [1] while maintaining a flexible architecture that can be adapted to diverse curricula, languages, and educational systems through its structured template approach. This adaptability is crucial as different cultural and linguistic contexts may require different approaches to content safety and educational value, with guardrails needing to be sensitive to cross-cultural considerations while maintaining core safety properties [7].
 
 - What core patterns of knowledge assessment transcend specific cultural contexts?
 
@@ -118,7 +124,7 @@ The question-based format of these guidelines is intentional - it encourages con
 ### Future-Proof Design Principles
 - How does the architecture anticipate continual evolution of AI capabilities?
 
-**Answer:** The architecture anticipates evolution through neural-symbolic modularity and compositionality [2], separating knowledge representation from specific implementations. EdgePrompt's framework development implements a rigidly structured question generation and validation pipeline that leverages both cloud and edge LLMs for distinct operational roles [1], enabling adaptation to advancing capabilities while maintaining core safety and educational principles.
+**Answer:** The architecture anticipates evolution through neural-symbolic modularity and compositionality [2], separating knowledge representation from specific implementations. EdgePrompt's framework development implements a rigidly structured question generation and validation pipeline that leverages both cloud and edge LLMs for distinct operational roles [1], enabling adaptation to advancing capabilities while maintaining core safety and educational principles. This forward-looking approach is essential as LLMs continue to evolve, requiring guardrails that can scale alongside increasing model sophistication without requiring complete redesign [7]. By focusing on structured prompting rather than model-specific modifications, EdgePrompt establishes safety mechanisms that can remain effective even as underlying model architectures change.
 
 - What abstraction layers insulate educational workflows from model-specific changes?
 
@@ -131,7 +137,7 @@ The question-based format of these guidelines is intentional - it encourages con
 ### Cross-Cultural Safety Adaptability
 - How do content safety boundaries adapt to diverse cultural and linguistic contexts?
 
-**Answer:** Safety boundaries adapt by recognizing that effective AI integration must consider local cultural and linguistic norms. The framework supports knowledge building across communities and leveraging diverse texts [2]. EdgePrompt targets specific educational contexts like Grade 5 language instruction in Indonesia [1] while maintaining flexible boundaries that can accommodate cultural differences while preserving core protections.
+**Answer:** Safety boundaries adapt by recognizing that effective AI integration must consider local cultural and linguistic norms. The framework supports knowledge building across communities and leveraging diverse texts [2]. EdgePrompt targets specific educational contexts like Grade 5 language instruction in Indonesia [1] while maintaining flexible boundaries that can accommodate cultural differences while preserving core protections. Research demonstrates that cultural prompting can be an effective method to reduce cultural bias in LLMs, though effectiveness varies across different contexts [7]. EdgePrompt's structured approach allows for culture-specific adjustments to safety definitions while maintaining consistent validation processes across implementations.
 
 - What mechanisms enable appropriate localization without compromising core safety?
 
@@ -165,9 +171,13 @@ The question-based format of these guidelines is intentional - it encourages con
 
 **Answer:** Structured prompting uniquely contributes to safe educational AI by simultaneously enhancing learning outcomes and maintaining safety guardrails through a principled approach that integrates neural-symbolic reasoning with an iterative learning process that fosters critical thinking while democratizing access to advanced AI capabilities [2,4]. EdgePrompt's implementation of structured prompting through templates embedding safety constraints with formal validation rules and multi-stage checks with explicit boundary conditions [1] creates accountability through transparency, enabling systems where safety emerges naturally from educationally-sound interaction patterns.
 
+The Code Prompting research demonstrates that structured prompting contributes uniquely to safe AI deployment by providing abstraction and simplification, explicit task reduction, disambiguation, and explicit templates for reasoning [6]. This approach makes AI reasoning more transparent and predictable by transforming complex problems into smaller, verifiable steps that are easier to validate, which is particularly valuable in educational contexts where safety and reliability are paramount [6].
+
 - Why does the neural-symbolic approach offer advantages over pure symbolic or neural methods?
 
 **Answer:** Neural-symbolic integration offers decisive advantages by combining neural networks' robust learning capabilities with symbolic systems' interpretability and reasoning power, creating architectures that simultaneously leverage pattern recognition strengths while maintaining the explainability and logical consistency essential for educational contexts [2,4]. While EdgePrompt draws inspiration from neural-symbolic principles, its current implementation focuses on structured prompt engineering without formal symbolic reasoning components [1], demonstrating effective guardrails through prompt engineering while maintaining the potential for future neural-symbolic integration.
+
+The Code Prompting method demonstrates specific advantages of neural-symbolic approaches by showing how they can overcome limitations of pure neural methods. The research shows that while current prompting methods using natural language can cause imperfect task reduction and confusion due to ambiguity, code prompting provides structured, unambiguous representations with explicit computation flows that make reasoning more accurate [6]. This approach helps LLMs plan the whole process of solution ahead, reducing complex problems into well-defined steps that are easier to validate [6].
 
 ### Bridging Educational Technology Divides
 - How does this framework specifically address longstanding inequities in educational technology?
@@ -193,7 +203,7 @@ The question-based format of these guidelines is intentional - it encourages con
 
 - Why will this approach remain pedagogically sound across evolving educational paradigms?
 
-**Answer:** This approach maintains pedagogical relevance across paradigm shifts by focusing on fundamental learning processes rather than specific techniques, building around universal principles of productive struggle and iterative improvement that transcend particular educational philosophies or technological implementations [2,3,4]. EdgePrompt's focus on structured prompting and multi-stage validation [1] establishes assessment principles that can adapt to evolving educational contexts while preserving their core effectiveness in supporting student learning.
+**Answer:** This approach maintains pedagogical relevance across paradigm shifts by focusing on fundamental learning processes rather than specific techniques, building around universal principles of productive struggle and iterative improvement that transcend particular educational philosophies or technological implementations [2,3,4]. EdgePrompt's focus on structured prompting and multi-stage validation [1] establishes assessment principles that can adapt to evolving educational contexts while preserving their core effectiveness in supporting student learning. By following a systematic development process and employing rigorous testing methodologies [7], EdgePrompt can verify its effectiveness across different educational contexts and evolve alongside changing pedagogical approaches while maintaining its core educational principles.
 
 ## 5. Technical Architecture & Implementation
 
@@ -201,6 +211,8 @@ The question-based format of these guidelines is intentional - it encourages con
 - How does prompt constraint enforcement create model-agnostic safety boundaries?
 
 **Answer:** Prompt constraints create model-agnostic safety through principled integration of neural learning, efficient inference, and symbolic interpretation [2]. EdgePrompt implements this through structured prompting with templates embedding safety constraints and formal validation rules [1], establishing safety at the knowledge representation rather than implementation level and maintaining consistent boundaries across model architectures.
+
+The Code Prompting research offers insight into how prompt constraint enforcement creates model-agnostic safety by showing that transforming problems into structured code provides explicit task reduction and disambiguation that works reliably across different models [6]. The approach creates robust safety boundaries by leveraging the unambiguous nature of programming languages and formal task decomposition, which reduces confusion and ensures consistent behavior even when tasks increase in complexity [6].
 
 - What validation principles will remain essential regardless of future model capabilities?
 
@@ -247,3 +259,7 @@ The question-based format of these guidelines is intentional - it encourages con
 [4] Hu, L. K., & Lee, D. C. (2024). Prompt engineering for critical thinking and equity in general education. *American Research Journal of Humanities and Social Sciences*, 10(1), 122-129.
 
 [5] AI for Education & Student Achievement Partners. (2024). *Guide to integrating generative AI for deeper literacy learning*.
+
+[6] Hu, Y., Yang, H., Lin, Z., & Zhang, M. (2023). Code Prompting: a Neural Symbolic Method for Complex Reasoning in Large Language Models. *arXiv preprint arXiv:2305.18507v2*.
+
+[7] Dong, Y., Mu, R., Jin, G., Qi, Y., Hu, J., Zhao, X., Meng, J., Ruan, W., & Huang, X. (2024). Building Guardrails for Large Language Models. *arXiv preprint arXiv:2402.01822v2*.

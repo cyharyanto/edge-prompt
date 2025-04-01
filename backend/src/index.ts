@@ -50,7 +50,7 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
- // Material endpoints (PROTECTED)
+ /* Material endpoints (PROTECTED)
  app.post('/api/materials', authMiddleware, upload.single('file'), async (req, res): Promise<void> => { ... });
  app.get('/api/materials/:id', authMiddleware, async (req, res): Promise<void> => { ... });
  app.get('/api/projects/:projectId/materials', authMiddleware, async (req, res): Promise<void> => { ... });
@@ -70,7 +70,8 @@ const upload = multer({ storage: storageMulter });
  app.post('/api/prompt-templates', authMiddleware, async (req, res): Promise<void> => { ... });
  app.put('/api/prompt-templates/:id', authMiddleware, async (req, res): Promise<void> => { ... });
  app.delete('/api/prompt-templates/:id', authMiddleware, async (req, res): Promise<void> => { ... });
-
+  */
+ 
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
     const { questionId, answer } = req.body;

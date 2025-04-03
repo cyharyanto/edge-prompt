@@ -13,7 +13,6 @@ export const LoginPage: React.FC = () => {
     setError(null);
     setIsLoading(true);
 
-    // Basic validation
     if (!email || !password) {
       setError("Please enter both email and password");
       setIsLoading(false);
@@ -21,13 +20,10 @@ export const LoginPage: React.FC = () => {
     }
 
     try {
-      // Simulated async login process
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Simulate successful login
       navigate("/");
 
-      // Reset form
       setEmail("");
       setPassword("");
     } catch (err) {

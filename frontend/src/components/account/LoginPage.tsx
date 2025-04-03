@@ -2,17 +2,19 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export const LoginPage: React.FC = () => {
+  // State variables to handle form inputs, errors, and loading state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Hook for navigating to different routes
   const navigate = useNavigate();
-
+  // Handles form submission for login.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-
+    // Basic validation to ensure fields are not empty
     if (!email || !password) {
       setError("Please enter both email and password");
       setIsLoading(false);
@@ -20,15 +22,18 @@ export const LoginPage: React.FC = () => {
     }
 
     try {
+      // Simulating an API call with a delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
+      // Navigate to the home page on successful login
       navigate("/");
-
+      // Clear input fields after successful login
       setEmail("");
       setPassword("");
     } catch (err) {
+      // Handle login failure
       setError("Login failed. Please try again.");
     } finally {
+      // Stop the loading state after process completion
       setIsLoading(false);
     }
   };

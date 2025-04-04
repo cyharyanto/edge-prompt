@@ -103,7 +103,7 @@ const SignUpPage: React.FC = () => {
                 className="btn btn-outline-secondary"
                 onClick={togglePasswordVisibility}
               >
-                {/* {passwordVisible ? <FaEyeSlash /> : <FaEye />} */}
+                {passwordVisible ? "Hide" : "Show"}
               </button>
             </div>
           </div>

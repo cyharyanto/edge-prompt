@@ -8,7 +8,12 @@ import PromptEngineeringTool from "./components/tools/PromptEngineeringTool";
 import { api } from "./services/api";
 import { Material } from "./types";
 import { ProjectForm } from "./components/project/ProjectForm";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
 import { LoginPage } from "./components/account/LoginPage";
 
 const MainContent: React.FC = () => {
@@ -23,6 +28,7 @@ const MainContent: React.FC = () => {
     null
   );
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const navigate = useNavigate();
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -114,16 +120,26 @@ const MainContent: React.FC = () => {
           <h1 className="h4 mb-0">
             <i className="bi bi-braces"></i> EdgePrompt
           </h1>
-          {activeProject ? (
-            <div className="badge bg-light text-primary">
-              {activeProject.name} ({activeProject.modelName})
-            </div>
-          ) : (
-            <div className="badge bg-warning text-dark">
-              <i className="bi bi-exclamation-triangle-fill me-1"></i>
-              No project selected
-            </div>
-          )}
+          <div className="ms-auto d-flex align-items-center">
+            <button
+              className="btn btn-info me-3"
+              onClick={() => navigate("/login")}
+            >
+              <i className="bi bi-person me-2"></i>
+              Login
+            </button>
+
+            {activeProject ? (
+              <div className="badge bg-light text-primary">
+                {activeProject.name} ({activeProject.modelName})
+              </div>
+            ) : (
+              <div className="badge bg-warning text-dark">
+                <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                No project selected
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -353,20 +369,17 @@ function getBadgeColor(status: string): string {
   }
 }
 
-// Wrap the app with ProjectProvider
-function App() {
+const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <ProjectProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<MainContent />} />
-          </Routes>
-        </Router>
-      </ProjectProvider>
-    </ErrorBoundary>
+    <ProjectProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<MainContent />} />
+        </Routes>
+      </Router>
+    </ProjectProvider>
   );
-}
+};
 
 export default App;

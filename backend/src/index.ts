@@ -14,6 +14,7 @@ import { DatabaseService } from './services/DatabaseService.js';
 import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
 import { registerUser } from './services/AuthenticationService.js';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,8 +45,6 @@ const storageMulter = multer.diskStorage({
 });
 
 const upload = multer({ storage: storageMulter });
-
-import bcrypt from 'bcryptjs';
 
 // Signup Endpoint
 app.post('/api/signup', async (req, res) => {

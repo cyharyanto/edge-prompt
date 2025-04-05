@@ -1,4 +1,3 @@
-// import bcrypt from 'bcrypt';
 import { db } from '../database.js';
 
 export async function registerUser(
@@ -12,6 +11,5 @@ export async function registerUser(
     INSERT INTO users (firstname, lastname, email, passwordhash, dob)
     VALUES (?, ?, ?, ?, ?)
   `);
-  // stmt.run(firstname, lastname, email, passwordhash, dob);
   stmt.run(firstname, lastname, email, passwordhash, dob);
 }

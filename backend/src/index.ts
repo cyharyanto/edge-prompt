@@ -45,12 +45,15 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
+import bcrypt from 'bcryptjs';
+
 // Signup Endpoint
 app.post('/api/signup', async (req, res) => {
   const { firstname, lastname, email, passwordhash, dob } = req.body;
+  const hashedPassword = await bcrypt.hash(passwordhash, 10);
 
   try {
-    await registerUser(firstname, lastname, email, passwordhash, dob);
+    await registerUser(firstname, lastname, email, hashedPassword, dob);
     res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });

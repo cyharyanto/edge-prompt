@@ -37,6 +37,7 @@ const SignUpPage: React.FC = () => {
         passwordhash: "",
         dob: "",
       });
+      navigate("/");
     } catch (error: any) {
       setMessage(`Signup failed: ${error.response?.data?.error || error.message}`);
     }

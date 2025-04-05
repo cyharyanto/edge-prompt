@@ -1,6 +1,3 @@
-// owen@LAPTOP-2RGKFPUM:~/RMIT/PP1/edge-prompt$ git stash
-// Saved working directory and index state WIP on SCRUM-22-design-implement-sign-up-page-ui: 9876669 Added password toggle
-
 // backend/src/database.ts
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
@@ -31,4 +28,3 @@ export const db = await open({
 // Load schema and initialize tables
 const schema = fs.readFileSync(schemaPath, 'utf8');
 await db.exec(schema);
-

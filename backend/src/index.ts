@@ -45,7 +45,7 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
-// === Signup Endpoint (combined from auth.ts) ===
+// Signup Endpoint
 app.post('/api/signup', async (req, res) => {
   const { firstname, lastname, email, passwordhash, dob } = req.body;
 

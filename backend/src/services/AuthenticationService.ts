@@ -1,6 +1,5 @@
-// backend/src/services/AuthenticationService.ts
 // import bcrypt from 'bcrypt';
-import { createUser } from '../db/userRepository.js';
+import { db } from '../database.js';
 
 export async function registerUser(
   firstname: string,
@@ -9,7 +8,9 @@ export async function registerUser(
   passwordhash: string,
   dob: string,
 ) {
-  // const passwordHash = await bcrypt.hash(password, 10);
-  // createUser(firstname, lastname, email, passwordHash, dob);
-  createUser(firstname, lastname, email, passwordhash, dob);
+  const stmt = await db.prepare(`
+    INSERT INTO users (firstname, lastname, email, passwordhash, dob)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  stmt.run(firstname, lastname, email, passwordhash, dob);
 }

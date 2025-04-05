@@ -13,6 +13,7 @@ import fs from 'fs/promises';
 import { DatabaseService } from './services/DatabaseService.js';
 import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
+import { registerUser } from './services/AuthenticationService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,6 +44,18 @@ const storageMulter = multer.diskStorage({
 });
 
 const upload = multer({ storage: storageMulter });
+
+// === Signup Endpoint (combined from auth.ts) ===
+app.post('/api/signup', async (req, res) => {
+  const { firstname, lastname, email, passwordhash, dob } = req.body;
+
+  try {
+    await registerUser(firstname, lastname, email, passwordhash, dob);
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'User creation failed', details: err.message });
+  }
+});
 
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {

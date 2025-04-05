@@ -1,34 +1,45 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from '../services/api';
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    firstname: "",
+    lastname: "",
     email: "",
-    password: "",
+    passwordhash: "",
     dob: "",
   });
 
   const [passwordVisible, setPasswordVisible] = useState(false);
 
+  const [message, setMessage] = useState('');
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/");
+    try {
+      await api.signup(formData);
+      setMessage('Account created successfully!');
+      setFormData({
+        firstname: "",
+        lastname: "",
+        email: "",
+        passwordhash: "",
+        dob: "",
+      });
+    } catch (error: any) {
+      setMessage(`Signup failed: ${error.response?.data?.error || error.message}`);
+    }
   };
 
   return (
@@ -40,30 +51,30 @@ const SignUpPage: React.FC = () => {
         <form onSubmit={handleSubmit}>
 
           <div className="mb-3">
-            <label htmlFor="firstName" className="form-label">
+            <label htmlFor="firstname" className="form-label">
               First Name
             </label>
             <input
               type="text"
               className="form-control"
-              id="firstName"
-              name="firstName"
-              value={formData.firstName}
+              id="firstname"
+              name="firstname"
+              value={formData.firstname}
               onChange={handleInputChange}
               required
             />
           </div>
 
           <div className="mb-3">
-            <label htmlFor="lastName" className="form-label">
+            <label htmlFor="lastname" className="form-label">
               Last Name
             </label>
             <input
               type="text"
               className="form-control"
-              id="lastName"
-              name="lastName"
-              value={formData.lastName}
+              id="lastname"
+              name="lastname"
+              value={formData.lastname}
               onChange={handleInputChange}
               required
             />
@@ -85,16 +96,16 @@ const SignUpPage: React.FC = () => {
           </div>
 
           <div className="mb-3">
-            <label htmlFor="password" className="form-label">
+            <label htmlFor="passwordhash" className="form-label">
               Password
             </label>
             <div className="input-group">
               <input
-                type={passwordVisible ? "text" : "password"}
+                type={passwordVisible ? "text" : "passwordhash"}
                 className="form-control"
-                id="password"
-                name="password"
-                value={formData.password}
+                id="passwordhash"
+                name="passwordhash"
+                value={formData.passwordhash}
                 onChange={handleInputChange}
                 required
               />

@@ -1,6 +1,7 @@
 import { db } from '../database.js';
 
 export async function registerUser(
+  id: string,
   firstname: string,
   lastname: string,
   email: string,
@@ -13,9 +14,9 @@ export async function registerUser(
     throw new Error('User already exists');
   } else {
     const stmt = await db.prepare(`
-      INSERT INTO users (firstname, lastname, email, passwordhash, dob)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO users (id, firstname, lastname, email, passwordhash, dob)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(firstname, lastname, email, passwordhash, dob);
+    stmt.run(id, firstname, lastname, email, passwordhash, dob);
   }
 }

@@ -50,9 +50,10 @@ const upload = multer({ storage: storageMulter });
 app.post('/api/signup', async (req, res) => {
   const { firstname, lastname, email, passwordhash, dob } = req.body;
   const hashedPassword = await bcrypt.hash(passwordhash, 10);
+  const id = uuid();
 
   try {
-    await registerUser(firstname, lastname, email, hashedPassword, dob);
+    await registerUser(id, firstname, lastname, email, hashedPassword, dob);
     res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });

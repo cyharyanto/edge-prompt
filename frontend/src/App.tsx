@@ -331,6 +331,7 @@ const App: React.FC = () => {
     <ProjectProvider>
     <Router>
       <Routes>
+        {/* Signup page route - connected to signup.tsx */}
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/" element ={<MainContent/>} />
       </Routes>

@@ -7,9 +7,15 @@ export async function registerUser(
   passwordhash: string,
   dob: string,
 ) {
-  const stmt = await db.prepare(`
-    INSERT INTO users (firstname, lastname, email, passwordhash, dob)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  stmt.run(firstname, lastname, email, passwordhash, dob);
+  // Check if the user already exists - connected to database.ts
+  const existingUser = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+  if (existingUser) {
+    throw new Error('User already exists');
+  } else {
+    const stmt = await db.prepare(`
+      INSERT INTO users (firstname, lastname, email, passwordhash, dob)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(firstname, lastname, email, passwordhash, dob);
+  }
 }

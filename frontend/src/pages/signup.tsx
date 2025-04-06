@@ -25,6 +25,7 @@ const SignUpPage: React.FC = () => {
     setPasswordVisible(!passwordVisible);
   };
 
+  // Handle form submission - connected to api.ts
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {

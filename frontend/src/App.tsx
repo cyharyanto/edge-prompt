@@ -11,7 +11,7 @@ import { ProjectForm } from './components/project/ProjectForm';
 
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import SignUpPage from "./pages/signup"; 
-import { LoginPage } from "./components/account/LoginPage";
+import { LoginPage } from "./pages/signin";
 
 
 // Main content wrapper that uses the project context

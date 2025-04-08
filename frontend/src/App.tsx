@@ -9,6 +9,10 @@ import { api } from './services/api';
 import { Material } from './types';
 import { ProjectForm } from './components/project/ProjectForm';
 
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import SignUpPage from "./signup/signup"; 
+
+
 // Main content wrapper that uses the project context
 const MainContent: React.FC = () => {
   const { projects, activeProject, setActiveProject } = useProject();
@@ -18,6 +22,7 @@ const MainContent: React.FC = () => {
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const navigate = useNavigate()
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -105,22 +110,34 @@ const MainContent: React.FC = () => {
   return (
     <div className="container-fluid">
       <header className="bg-primary text-white p-3 mb-4">
-        <div className="d-flex justify-content-between align-items-center">
-          <h1 className="h4 mb-0">
-            <i className="bi bi-braces"></i> EdgePrompt
-          </h1>
-          {activeProject ? (
-            <div className="badge bg-light text-primary">
-              {activeProject.name} ({activeProject.modelName})
-            </div>
-          ) : (
-            <div className="badge bg-warning text-dark">
-              <i className="bi bi-exclamation-triangle-fill me-1"></i>
-              No project selected
-            </div>
-          )}
+  <div className="d-flex align-items-center">
+    
+  <h1 className="h4 mb-0 me-3">
+        <i className="bi bi-braces"></i> EdgePrompt
+      </h1>
+
+    {/* Sign Up Button on the Left */}
+   
+
+    {/* Spacer to push other content to the right */}
+  <div className="ms-auto d-flex align-items-center">
+    <button className="btn btn-info me-3" onClick={() => navigate("/signup")}>
+      <i className="bi bi-person-plus"></i> Sign Up
+    </button>
+
+      {activeProject ? (
+        <div className="badge bg-light text-primary">
+          {activeProject.name} ({activeProject.modelName})
         </div>
-      </header>
+      ) : (
+        <div className="badge bg-warning text-dark">
+          <i className="bi bi-exclamation-triangle-fill me-1"></i>
+          No project selected
+        </div>
+      )}
+    </div>
+  </div>
+</header>
 
       <div className="row">
         {/* Left Sidebar */}
@@ -309,15 +326,17 @@ function getBadgeColor(status: string): string {
   }
 }
 
-// Wrap the app with ProjectProvider
-function App() {
+const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <ProjectProvider>
-        <MainContent />
-      </ProjectProvider>
-    </ErrorBoundary>
+    <ProjectProvider>
+    <Router>
+      <Routes>
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/" element ={<MainContent/>} />
+      </Routes>
+    </Router>
+    </ProjectProvider>
   );
-}
+};
 
-export default App; 
+export default App;

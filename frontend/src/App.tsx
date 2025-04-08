@@ -10,7 +10,7 @@ import { Material } from './types';
 import { ProjectForm } from './components/project/ProjectForm';
 
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
-import SignUpPage from "./signup/signup"; 
+import SignUpPage from "./pages/signup"; 
 
 
 // Main content wrapper that uses the project context
@@ -331,6 +331,7 @@ const App: React.FC = () => {
     <ProjectProvider>
     <Router>
       <Routes>
+        {/* Signup page route - connected to signup.tsx */}
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/" element ={<MainContent/>} />
       </Routes>

@@ -1,21 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { SimplifiedMaterialUploader } from "./components/teacher/SimplifiedMaterialUploader";
-import { MaterialDetailView } from "./components/teacher/MaterialDetailView";
-import { ProjectProvider, useProject } from "./contexts/ProjectContext";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { PromptTemplateManager } from "./components/prompt/PromptTemplateManager";
-import PromptEngineeringTool from "./components/tools/PromptEngineeringTool";
-import { api } from "./services/api";
-import { Material } from "./types";
-import { ProjectForm } from "./components/project/ProjectForm";
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes,
-  useNavigate,
-} from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { SimplifiedMaterialUploader } from './components/teacher/SimplifiedMaterialUploader';
+import { MaterialDetailView } from './components/teacher/MaterialDetailView';
+import { ProjectProvider, useProject } from './contexts/ProjectContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
+import PromptEngineeringTool from './components/tools/PromptEngineeringTool';
+import { api } from './services/api';
+import { Material } from './types';
+import { ProjectForm } from './components/project/ProjectForm';
+
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import SignUpPage from "./pages/signup"; 
 import { LoginPage } from "./components/account/LoginPage";
 
+
+// Main content wrapper that uses the project context
 const MainContent: React.FC = () => {
   const { projects, activeProject, setActiveProject } = useProject();
   const [activeTab, setActiveTab] = useState<
@@ -121,12 +120,11 @@ const MainContent: React.FC = () => {
             <i className="bi bi-braces"></i> EdgePrompt
           </h1>
           <div className="ms-auto d-flex align-items-center">
-            <button
-              className="btn btn-info me-3"
-              onClick={() => navigate("/login")}
-            >
-              <i className="bi bi-person me-2"></i>
-              Login
+            <button className="btn btn-info me-3" onClick={() => navigate("/signup")}>
+              <i className="bi bi-person-plus"></i> Sign Up
+            </button>
+            <button className="btn btn-info me-3" onClick={() => navigate("/login")}>
+              <i className="bi bi-person me-2"></i> Login
             </button>
 
             {activeProject ? (
@@ -372,13 +370,16 @@ function getBadgeColor(status: string): string {
 const App: React.FC = () => {
   return (
     <ProjectProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<MainContent />} />
-        </Routes>
-      </Router>
+    <Router>
+      <Routes>
+        {/* Signup page route - connected to signup.tsx */}
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element ={<MainContent/>} />
+      </Routes>
+    </Router>
     </ProjectProvider>
+    
   );
 };
 

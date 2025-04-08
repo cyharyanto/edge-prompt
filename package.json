@@ -13,10 +13,16 @@
     "test": "npm test --workspaces --if-present"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/sqlite3": "^5.1.0",
     "concurrently": "^8.2.2"
   },
   "dependencies": {
     "@types/react-router-dom": "^5.3.3",
-    "react-router-dom": "^7.4.1"
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.4.1",
+    "sqlite": "^5.1.1"
   }
 }

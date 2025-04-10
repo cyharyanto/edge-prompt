@@ -10,7 +10,7 @@ const SignUpPage: React.FC = () => {
     firstname: "",
     lastname: "",
     email: "",
-    passwordhash: "",
+    password: "",
     dob: "",
   });
 
@@ -30,23 +30,13 @@ const SignUpPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const hashedPassword = bcrypt.hashSync(formData.passwordhash, 10);
-
-      const userToSubmit = {
-        firstname: formData.firstname,
-        lastname: formData.lastname,
-        email: formData.email,
-        passwordhash: hashedPassword,
-        dob: formData.dob,
-      };
-
-      await api.signup(userToSubmit);
+      await api.signup(formData);
       setMessage('Account created successfully!');
       setFormData({
         firstname: "",
         lastname: "",
         email: "",
-        passwordhash: "",
+        password: "",
         dob: "",
       });
       navigate("/");
@@ -114,11 +104,11 @@ const SignUpPage: React.FC = () => {
             </label>
             <div className="input-group">
               <input
-                type={passwordVisible ? "text" : "passwordhash"}
+                type={passwordVisible ? "text" : "password"}
                 className="form-control"
-                id="passwordhash"
-                name="passwordhash"
-                value={formData.passwordhash}
+                id="password"
+                name="password"
+                value={formData.password}
                 onChange={handleInputChange}
                 required
               />

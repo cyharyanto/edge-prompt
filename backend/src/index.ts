@@ -49,14 +49,16 @@ const upload = multer({ storage: storageMulter });
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
-  const { firstname, lastname, email, passwordhash, dob } = req.body;
+  const { firstname, lastname, email, password, dob } = req.body;
   const id = uuid();
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   const user: User = {
     id: id,
     firstname: firstname,
     lastname: lastname,
     email: email,
-    passwordhash: passwordhash,
+    passwordhash: hashedPassword,
     dob: dob,
   };
 
@@ -71,11 +73,11 @@ app.post('/api/signup', async (req, res) => {
 
 // signin Endpoint - connected to DatabaseService.ts
 app.post('/api/signin', async (req, res) => {
-  const { email, passwordhash } = req.body;
+  const { email, password } = req.body;
 
   try {
 
-    if (!email || !passwordhash) {
+    if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
@@ -84,7 +86,7 @@ app.post('/api/signin', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const isPasswordValid = await bcrypt.compare(passwordhash, user.passwordhash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordhash);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }

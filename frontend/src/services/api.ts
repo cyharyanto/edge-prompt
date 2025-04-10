@@ -13,13 +13,13 @@ export interface SignupData {
   firstname: string;
   lastname: string;
   email: string;
-  passwordhash: string;
+  password: string;
   dob: string;
 }
 
 export interface SigninData {
   email: string;
-  passwordhash: string;
+  password: string;
 }
 
 class ApiClient {

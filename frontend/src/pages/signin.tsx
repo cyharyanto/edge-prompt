@@ -25,13 +25,12 @@ export const LoginPage: React.FC = () => {
     }
 
     try {
-      const hashedPassword = bcrypt.hashSync(password, 10);
       const userToSubmit = {
         email: email,
-        passwordhash: hashedPassword,
+        password: password,
       }
-      const response = await api.signin(userToSubmit);
 
+      const response = await api.signin(userToSubmit);
       
       // Navigate to the home page on successful login
       if (response && response.token) {

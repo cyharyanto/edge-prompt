@@ -50,14 +50,13 @@ const upload = multer({ storage: storageMulter });
 // Signup Endpoint - connected to AuthenticationService.ts
 app.post('/api/signup', async (req, res) => {
   const { firstname, lastname, email, passwordhash, dob } = req.body;
-  const hashedPassword = await bcrypt.hash(passwordhash, 10);
   const id = uuid();
   const user: User = {
     id: id,
     firstname: firstname,
     lastname: lastname,
     email: email,
-    passwordhash: hashedPassword,
+    passwordhash: passwordhash,
     dob: dob,
   };
 

@@ -14,8 +14,11 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/sqlite3": "^5.1.0",
-    "concurrently": "^8.2.2"
+    "@types/supertest": "^6.0.3",
+    "concurrently": "^8.2.2",
+    "supertest": "^7.1.0"
   },
   "dependencies": {
     "@types/react-router-dom": "^5.3.3",

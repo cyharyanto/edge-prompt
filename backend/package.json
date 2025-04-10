@@ -11,7 +11,9 @@
     "migrate": "tsx src/db/migrate.ts",
     "test": "NODE_ENV=test mocha --require tsx/cjs 'src/**/*.test.ts' --file src/test/setup.ts",
     "test:watch": "mocha --watch",
-    "test:storage": "mocha src/services/StorageService.test.ts"
+    "test:storage": "mocha src/services/StorageService.test.ts",
+    "test:auth": "mocha src/middleware/authMiddleware.test.ts",
+    "test:database": "mocha src/services/DatabaseService.test.ts"
   },
   "dependencies": {
     "@edge-prompt/common": "file:../common",

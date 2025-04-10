@@ -1,8 +1,10 @@
-import { DatabaseService } from './DatabaseService.js';
+import { DatabaseService, User } from './DatabaseService.js';
 import { StorageService } from './StorageService.js';
 import { expect } from 'chai';
 import { join } from 'path';
 import { writeFile, rm } from 'fs/promises';
+import { v4 as uuid } from 'uuid';
+
 
 describe('DatabaseService - Materials', () => {
   let db: DatabaseService;
@@ -107,3 +109,99 @@ describe('DatabaseService - Materials', () => {
     });
   });
 }); 
+
+describe('DatabaseService - User Management', () => {
+  let db: DatabaseService;
+
+  beforeEach(() => {
+    db = new DatabaseService();
+  });
+
+  it('should create a user', async () => {
+    const userId = uuid();
+    const userData : User = {
+      id: userId,
+      firstname: 'user',
+      lastname: 'test',
+      email: 'test@example.com',
+      passwordhash: 'hashed_password', // In real scenarios, this would be a bcrypt hash
+      dob: '2000-01-01',
+    };
+
+    await db.registerUser(userData);    
+    const retrievedUser = await db.getUserByEmail('test@example.com');
+
+    
+    expect(retrievedUser).to.not.be.null;
+    expect(retrievedUser?.firstname).to.equal('user');
+    expect(retrievedUser?.lastname).to.equal('test');
+    expect(retrievedUser?.email).to.equal('test@example.com');
+    expect(retrievedUser?.passwordhash).to.equal('hashed_password');
+    expect(retrievedUser?.dob).to.equal('2000-01-01');
+    expect(retrievedUser?.created_at).to.not.be.null;
+
+    await db.deleteUserByEmail('test@example.com'); // Clean up after test
+  });
+
+  it('should get a user by email', async () => {
+    const userId = uuid();
+    const userData : User = {
+      id: userId,
+      firstname: 'user',
+      lastname: 'test',
+      email: 'test@example.com',
+      passwordhash: 'hashed_password', // In real scenarios, this would be a bcrypt hash
+      dob: '2000-01-01',
+    };
+
+    await db.registerUser(userData);
+    const retrievedUser = await db.getUserByEmail('test@example.com');
+
+    expect(retrievedUser).to.not.be.null;
+    expect(retrievedUser?.firstname).to.equal('user');
+    expect(retrievedUser?.lastname).to.equal('test');
+    expect(retrievedUser?.email).to.equal('test@example.com');
+    expect(retrievedUser?.passwordhash).to.equal('hashed_password');
+    expect(retrievedUser?.dob).to.equal('2000-01-01');
+    expect(retrievedUser?.createdAt).to.not.be.null;
+
+    await db.deleteUserByEmail('test@example.com'); // Clean up after test  
+  });
+
+  it('should return null if user not found', async () => {
+    const user = await db.getUserByEmail('nonexistent@example.com');
+    expect(user).to.be.null;
+  });
+
+  it('should handle duplicate email', async () => {
+    const userId1 = uuid();
+    const userData1 : User = {
+      id: userId1,
+      firstname: 'user',
+      lastname: 'test',
+      email: 'test@example.com',
+      passwordhash: 'hashed_password', // In real scenarios, this would be a bcrypt hash
+      dob: '2000-01-01',
+    };
+    await db.registerUser(userData1);
+
+    const userId2 = uuid();
+    const userData2 : User = {
+      id: userId2,
+      firstname: 'user',
+      lastname: 'test',
+      email: 'test@example.com',
+      passwordhash: 'hashed_password', // In real scenarios, this would be a bcrypt hash
+      dob: '2000-01-01',
+    };
+
+    try {
+        await db.registerUser(userData2);
+        expect.fail('Expected createUser to throw an error');
+    } catch (error: any) {
+        expect(error.message).to.include('UNIQUE constraint failed'); // Adjust this to match your DB error message
+    }
+
+    await db.deleteUserByEmail('test@example.com'); // Clean up after test  
+  });
+});

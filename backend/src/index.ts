@@ -10,11 +10,12 @@ import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
 import { MaterialSource } from './types/index.js';
 import fs from 'fs/promises';
-import { DatabaseService } from './services/DatabaseService.js';
+import { DatabaseService, User } from './services/DatabaseService.js';
 import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
-import { registerUser } from './services/AuthenticationService.js';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { authMiddleware } from './middleware/authMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -51,10 +52,19 @@ app.post('/api/signup', async (req, res) => {
   const { firstname, lastname, email, passwordhash, dob } = req.body;
   const hashedPassword = await bcrypt.hash(passwordhash, 10);
   const id = uuid();
+  const user: User = {
+    id: id,
+    firstname: firstname,
+    lastname: lastname,
+    email: email,
+    passwordhash: hashedPassword,
+    dob: dob,
+  };
 
   try {
-    await registerUser(id, firstname, lastname, email, hashedPassword, dob);
-    res.status(201).json({ message: 'User created successfully' });
+    await db.registerUser(user);
+    const token = jwt.sign({id, firstname, lastname, email, passwordhash}, 'your-secret-key', { expiresIn: '1h' });
+    res.status(201).json({ token, message: 'User created successfully'});
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });
   }

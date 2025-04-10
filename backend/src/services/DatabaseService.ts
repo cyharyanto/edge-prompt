@@ -5,6 +5,16 @@ import { StorageService } from './StorageService.js';
 import { Material, MaterialStatus } from '../types/index.js';
 import { rm } from 'fs/promises';
 
+export interface User {
+  id: string;
+  firstname: string;
+  lastname: string;
+  email: string;
+  passwordhash: string;
+  dob: string;
+  created_at?: string;
+}
+
 interface ProjectRow {
   id: string;
   name: string;
@@ -580,5 +590,40 @@ export class DatabaseService {
       JSON.stringify(params.metadata),
       params.id
     );
+  }
+
+  async registerUser(user: Omit<User, 'created_at'>): Promise<void> {
+    const stmt = await this.db.prepare(`
+      INSERT INTO users (id, firstname, lastname, email, passwordhash, dob)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+      stmt.run(user.id, user.firstname, user.lastname, user.email, user.passwordhash, user.dob);
+  }
+  async deleteUserByEmail(email: string): Promise<void> {
+    try {
+      const stmt = await this.db.prepare(`
+        DELETE FROM users
+        WHERE email = ?
+      `);
+      await stmt.run(email);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error; // Re-throw the error to be handled by the caller
+    }
+  }
+  
+  async getUserByEmail(email: string): Promise<User | null> { // Changed return type
+    try {
+      const stmt = await this.db.prepare(`
+        SELECT id, firstname, lastname, email, dob, passwordhash, created_at 
+        FROM users
+        WHERE email = ?
+      `);
+      const user = await stmt.get(email) as User | undefined; // Explicitly cast
+      return user || null; //  Return undefined if not found
+    } catch (error) {
+      console.error('Error in getUserByEmail:', error);
+      throw error; // Propagate the error to the caller
+    }
   }
 } 

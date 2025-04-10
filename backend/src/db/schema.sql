@@ -58,13 +58,16 @@ CREATE TABLE IF NOT EXISTS responses (
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
 );
 
+DROP TABLE IF EXISTS users;
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   firstname TEXT NOT NULL,
   lastname TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   passwordhash TEXT NOT NULL,
-  dob TEXT NOT NULL
+  dob TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for better query performance

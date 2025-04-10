@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from '../services/api';
+import  bcrypt from 'bcryptjs';
 
 export const LoginPage: React.FC = () => {
   // State variables to handle form inputs, errors, and loading state
@@ -7,6 +9,7 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
   // Hook for navigating to different routes
   const navigate = useNavigate();
   // Handles form submission for login.
@@ -22,16 +25,34 @@ export const LoginPage: React.FC = () => {
     }
 
     try {
-      // Simulating an API call with a delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const hashedPassword = bcrypt.hashSync(password, 10);
+      const userToSubmit = {
+        email: email,
+        passwordhash: hashedPassword,
+      }
+      const response = await api.signin(userToSubmit);
+
+      
       // Navigate to the home page on successful login
-      navigate("/");
+      if (response && response.token) {
+        //  Assuming the backend sends a 'token' property
+        localStorage.setItem("authToken", response.token); //  Securely store the token
+        navigate("/"); // Navigate to the home page
+      } else {
+      setError("Login failed. Please try again."); //  Generic error
+      }
       // Clear input fields after successful login
       setEmail("");
       setPassword("");
-    } catch (err) {
-      // Handle login failure
-      setError("Login failed. Please try again.");
+    } catch (err:any) {
+      //  Handle specific API errors
+      if (err.message === 'Invalid credentials') {
+        setError('Invalid email or password.');
+      } else if (err.message === 'User not found') {
+        setError('User with this email not found.');
+      } else {
+        setError(err.message || "Login failed due to an unexpected error.");
+      }
     } finally {
       // Stop the loading state after process completion
       setIsLoading(false);

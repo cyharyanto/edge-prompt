@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../services/api';
+import  bcrypt from 'bcryptjs';
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,7 +30,17 @@ const SignUpPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.signup(formData);
+      const hashedPassword = bcrypt.hashSync(formData.passwordhash, 10);
+
+      const userToSubmit = {
+        firstname: formData.firstname,
+        lastname: formData.lastname,
+        email: formData.email,
+        passwordhash: hashedPassword,
+        dob: formData.dob,
+      };
+
+      await api.signup(userToSubmit);
       setMessage('Account created successfully!');
       setFormData({
         firstname: "",

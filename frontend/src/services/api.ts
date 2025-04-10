@@ -1,5 +1,6 @@
 import { Project, PromptTemplate, Material } from '../types';
 import { MaterialSource, ContentTemplate, ValidationResult } from '../../../backend/src/types';
+import { data } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:3001/api';
 
@@ -14,6 +15,11 @@ export interface SignupData {
   email: string;
   passwordhash: string;
   dob: string;
+}
+
+export interface SigninData {
+  email: string;
+  passwordhash: string;
 }
 
 class ApiClient {
@@ -37,6 +43,14 @@ class ApiClient {
   // Signup and authentication endpoints - connected to backend index.ts
   async signup(data: SignupData) {
     return this.request<{ message: string }>('/signup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  //Signin and authentication endpoints - connected to backend index.ts
+  async signin(data: SigninData) {
+    return this.request<{ token: string }>('/signin', {
       method: 'POST',
       body: JSON.stringify(data),
     });

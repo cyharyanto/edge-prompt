@@ -47,25 +47,55 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
-// Signup Endpoint - connected to AuthenticationService.ts
+// Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
-  const { firstname, lastname, email, passwordhash, dob } = req.body;
+  const { firstname, lastname, email, password, dob } = req.body;
   const id = uuid();
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   const user: User = {
     id: id,
     firstname: firstname,
     lastname: lastname,
     email: email,
-    passwordhash: passwordhash,
+    passwordhash: hashedPassword,
     dob: dob,
   };
 
   try {
     await db.registerUser(user);
-    const token = jwt.sign({id, firstname, lastname, email, passwordhash}, 'your-secret-key', { expiresIn: '1h' });
+    const token = jwt.sign({id, email}, 'your-secret-key', { expiresIn: '1h' });
     res.status(201).json({ token, message: 'User created successfully'});
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });
+  }
+});
+
+// signin Endpoint - connected to DatabaseService.ts
+app.post('/api/signin', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const user = await db.getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordhash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    else {
+      const token = jwt.sign({ id: user.id, email: user.email }, 'your-secret-key', { expiresIn: '1h' });
+      res.json({ token, user });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Login failed', details: err.message });
   }
 });
 

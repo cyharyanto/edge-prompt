@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../services/api';
+import  bcrypt from 'bcryptjs';
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ const SignUpPage: React.FC = () => {
     firstname: "",
     lastname: "",
     email: "",
-    passwordhash: "",
+    password: "",
     dob: "",
   });
 
@@ -35,7 +36,7 @@ const SignUpPage: React.FC = () => {
         firstname: "",
         lastname: "",
         email: "",
-        passwordhash: "",
+        password: "",
         dob: "",
       });
       navigate("/");
@@ -103,11 +104,11 @@ const SignUpPage: React.FC = () => {
             </label>
             <div className="input-group">
               <input
-                type={passwordVisible ? "text" : "passwordhash"}
+                type={passwordVisible ? "text" : "password"}
                 className="form-control"
-                id="passwordhash"
-                name="passwordhash"
-                value={formData.passwordhash}
+                id="password"
+                name="password"
+                value={formData.password}
                 onChange={handleInputChange}
                 required
               />

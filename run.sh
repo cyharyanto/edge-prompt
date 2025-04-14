@@ -64,7 +64,17 @@ else
 fi
 
 # Update .env with the LM Studio URL
-echo "LM_STUDIO_URL=$LM_STUDIO_URL" > backend/.env
+ENV_FILE="backend/.env"
+
+# Preserve existing .env settings, update or append LM_STUDIO_URL
+if grep -q "^LM_STUDIO_URL=" "$ENV_FILE"; then
+  # Replace existing LM_STUDIO_URL
+  sed -i '' "s|^LM_STUDIO_URL=.*|LM_STUDIO_URL=$LM_STUDIO_URL|" "$ENV_FILE"
+else
+  # Append LM_STUDIO_URL if not found
+  echo "LM_STUDIO_URL=$LM_STUDIO_URL" >> "$ENV_FILE"
+fi
+
 
 # Print connection info
 echo "================================================================="

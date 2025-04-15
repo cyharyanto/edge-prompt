@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PromptTemplate } from '../../types';
+import DOMPurify from 'dompurify';
 
 interface Props {
   onClose: () => void;
@@ -37,7 +38,19 @@ export const ProjectForm: React.FC<Props> = ({ onClose, onSuccess }) => {
     setError(null);
 
     try {
-      await api.createProject(formData);
+      const projectData = {
+        name: DOMPurify.sanitize(formData.name),
+        description: DOMPurify.sanitize(formData.description),
+        modelName: formData.modelName,
+        promptTemplateId: DOMPurify.sanitize(formData.promptTemplateId),
+        configuration:{
+          language: formData.configuration.language,
+          gradeLevel: DOMPurify.sanitize(formData.configuration.gradeLevel),
+          subject: DOMPurify.sanitize(formData.configuration.subject)
+        }
+      }
+
+      await api.createProject(projectData);
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project');

@@ -9,6 +9,15 @@ const ProfilePage: React.FC = () => {
     lastname: "",
     email: "",
     dob: "",
+    password: "",
+  });
+
+  const [editData, setEditData] = useState({
+    firstname: false,
+    lastname: false,
+    email: false,
+    dob: false,
+    password: false,
   });
 
   const [originalData, setOriginalData] = useState(formData);

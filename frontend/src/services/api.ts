@@ -22,6 +22,13 @@ export interface SigninData {
   password: string;
 }
 
+export interface UpdateProfileData {
+  firstname: string;
+  lastname: string;
+  email: string;
+  dob: string;
+}
+
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -56,6 +63,37 @@ class ApiClient {
     });
   }
 
+  // Profile credentials retrieval endpoints - connected to backend index.ts
+  async getProfile() {
+    return this.request<{
+      firstname: string;
+      lastname: string;
+      email: string;
+      dob: string;
+    }>('/profile', {
+      method: 'GET',
+    });
+  }
+  // Profile credentials update endpoints - connected to backend index.ts
+  async updateProfile(data: UpdateProfileData) {
+    return this.request<{ message: string }>('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+  // Profile logout endpoints - connected to backend index.ts
+  async signout() {
+    return this.request<{ message: string }>('/signout', {
+      method: 'POST',
+    });
+  }
+  // Profile delete account endpoints - connected to backend index.ts
+  async deleteAccount() {
+    return this.request<{ message: string }>('/delete-account', {
+      method: 'DELETE',
+    });
+  }
+  
   // Project endpoints
   async getProjects() {
     return this.request<Project[]>('/projects');

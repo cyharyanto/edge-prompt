@@ -11,7 +11,8 @@ import { ProjectForm } from './components/project/ProjectForm';
 
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import SignUpPage from "./pages/signup"; 
-import { LoginPage } from "./pages/signin";
+import { SigninPage } from "./pages/signin";
+import ProfilePage from "./pages/profile";
 
 
 // Main content wrapper that uses the project context
@@ -123,8 +124,11 @@ const MainContent: React.FC = () => {
             <button className="btn btn-info me-3" onClick={() => navigate("/signup")}>
               <i className="bi bi-person-plus"></i> Sign Up
             </button>
-            <button className="btn btn-info me-3" onClick={() => navigate("/login")}>
+            <button className="btn btn-info me-3" onClick={() => navigate("/signin")}>
               <i className="bi bi-person me-2"></i> Login
+            </button>
+            <button className="btn btn-info me-3" onClick={() => navigate("/profile")}>
+              <i className="bi bi-person-circle me-2"></i> Profile
             </button>
 
             {activeProject ? (
@@ -374,7 +378,8 @@ const App: React.FC = () => {
       <Routes>
         {/* Signup page route - connected to signup.tsx */}
         <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signin" element={<SigninPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/" element ={<MainContent/>} />
       </Routes>
     </Router>

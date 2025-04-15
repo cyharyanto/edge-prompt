@@ -48,7 +48,7 @@ class ApiClient {
     });
   }
 
-  //Signin and authentication endpoints - connected to backend index.ts
+  // Signin and authentication endpoints - connected to backend index.ts
   async signin(data: SigninData) {
     return this.request<{ token: string }>('/signin', {
       method: 'POST',

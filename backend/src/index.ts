@@ -102,6 +102,28 @@ app.post('/api/signin', async (req, res) => {
   }
 });
 
+// Sign-out 
+app.post('/api/signout', authMiddleware, async (_req, res) => {
+  res.status(200).json({ message: 'User signed out successfully' });
+});
+
+// Delete Account
+app.delete('/api/account', authMiddleware, async (req, res) => {
+  const userId = req.user?.userId;  
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    await db.deleteUserById(userId); 
+    res.status(200).json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting account:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
     const { questionId, answer } = req.body;

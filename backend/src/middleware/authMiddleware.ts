@@ -20,7 +20,10 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
         try {
             const decoded = jwt.verify(token, jwtSecret);
-            req.user = decoded; // Attach user data to the request
+            req.user = {
+                userId: (decoded as any).id,
+                email: (decoded as any).email
+              };
             next();
         } catch (error) {
             res.status(401).json({ message: 'Invalid token' });

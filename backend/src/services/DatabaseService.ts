@@ -626,4 +626,7 @@ export class DatabaseService {
       throw error; // Propagate the error to the caller
     }
   }
+  async deleteUserById(userId: string): Promise<void> {
+    await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
+  }
 } 

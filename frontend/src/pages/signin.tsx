@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../services/api';
-import  bcrypt from 'bcryptjs';
 
-export const LoginPage: React.FC = () => {
+export const SigninPage: React.FC = () => {
   // State variables to handle form inputs, errors, and loading state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,4 +136,4 @@ export const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default SigninPage;

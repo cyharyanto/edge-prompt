@@ -15,6 +15,7 @@ export interface SignupData {
   email: string;
   password: string;
   dob: string;
+  roleName: string;
 }
 
 export interface SigninData {

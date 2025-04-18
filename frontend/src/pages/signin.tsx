@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../services/api';
+import DOMPurify from 'dompurify';
 
 export const SigninPage: React.FC = () => {
   // State variables to handle form inputs, errors, and loading state
@@ -34,8 +35,8 @@ export const SigninPage: React.FC = () => {
 
     try {
       const userToSubmit = {
-        email: email,
-        password: password,
+        email: DOMPurify.sanitize(email),
+        password: DOMPurify.sanitize(password),
       }
 
       const response = await api.signin(userToSubmit);

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../services/api';
-import { sign } from "crypto";
+import DOMPurify from 'dompurify';
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,13 +32,14 @@ const SignUpPage: React.FC = () => {
     e.preventDefault();
     try {
       const signupData = {
-        firstname: formData.firstname,
-        lastname: formData.lastname,
-        email: formData.email,
-        password: formData.password,
-        dob: formData.dob,
+        firstname: DOMPurify.sanitize(formData.firstname),
+        lastname: DOMPurify.sanitize(formData.lastname),
+        email: DOMPurify.sanitize(formData.email),
+        password: DOMPurify.sanitize(formData.password),
+        dob: DOMPurify.sanitize(formData.dob),
         roleName: formData.roleName
-      };
+      }
+      
       await api.signup(signupData);
       setMessage('Account created successfully!');
       setFormData({

@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { MaterialSource, ContentTemplate } from '../../../../backend/src/types';
 import { api } from '../../services/api';
+import DOMPurify from 'dompurify';
+
 
 interface Props {
   onMaterialLoad: (material: MaterialSource) => void;
@@ -79,7 +81,7 @@ export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId, s
       return;
     }
 
-    setIsUploading(true);
+    setIsUploading(true); // Start loading
 
     try {
       const formData = new FormData();
@@ -87,7 +89,12 @@ export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId, s
       
       // Always include projectId in metadata
       const metadataWithProject = { 
-        ...metadata, 
+        title: DOMPurify.sanitize(metadata.title),
+        subject: DOMPurify.sanitize(metadata.subject),
+        grade: DOMPurify.sanitize(metadata.grade),
+        chapter: DOMPurify.sanitize(metadata.chapter),
+        focusArea: DOMPurify.sanitize(metadata.focusArea),
+        useSourceLanguage: metadata.useSourceLanguage,
         projectId: projectId  // Ensure projectId is included
       };
       

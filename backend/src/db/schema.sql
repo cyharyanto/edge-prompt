@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS responses (
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
 );
 
-DROP TABLE IF EXISTS users;
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,

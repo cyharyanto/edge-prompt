@@ -3,6 +3,7 @@ import { Project, ProjectConfiguration } from '../../types';
 import { api } from '../../services/api';
 import { useProject } from '../../contexts/ProjectContext';
 import { PromptTemplatePreview } from '../prompt/PromptTemplatePreview';
+import DOMPurify from 'dompurify';
 
 interface Props {
   project: Project;

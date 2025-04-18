@@ -25,8 +25,8 @@ export const SigninPage: React.FC = () => {
 
     try {
       const userToSubmit = {
-        email: email,
-        password: password,
+        email: DOMPurify.sanitize(email),
+        password: DOMPurify.sanitize(password),
       }
 
       const response = await api.signin(userToSubmit);

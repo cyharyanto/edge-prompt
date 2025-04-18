@@ -29,7 +29,14 @@ const SignUpPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.signup(formData);
+      const signupData = {
+        firstname: DOMPurify.sanitize(formData.firstname),
+        lastname: DOMPurify.sanitize(formData.lastname),
+        email: DOMPurify.sanitize(formData.email),
+        password: DOMPurify.sanitize(formData.password),
+        dob: DOMPurify.sanitize(formData.dob),
+      }
+      await api.signup(signupData);
       setMessage('Account created successfully!');
       setFormData({
         firstname: "",

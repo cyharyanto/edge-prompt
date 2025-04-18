@@ -25,7 +25,10 @@ app.use(cors());
 app.use(express.json());
 
 // Create uploads directory if it doesn't exist
+
+
 const uploadsDir = join(dirname(__dirname), 'uploads');
+console.log("uploadsDir is: " + uploadsDir)
 mkdirSync(uploadsDir, { recursive: true });
 
 const lmStudio = new LMStudioService();

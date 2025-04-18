@@ -1,7 +1,9 @@
 import { mkdir, rm, cp, writeFile } from 'fs/promises';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
+dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -19,9 +21,9 @@ export class StorageService {
 
   constructor(config?: Partial<StorageConfig>) {
     this.config = {
-      rootDir: join(dirname(dirname(__dirname)), 'uploads'),
-      allowedTypes: ['.pdf', '.docx', '.doc', '.txt', '.md'],
-      maxFileSize: 10 * 1024 * 1024, // 10MB
+      rootDir: process.env.STORAGE_ROOT || join(dirname(dirname(__dirname)), 'secure-storage'),
+      allowedTypes: process.env.STORAGE_ALLOWED_TYPES?.split(',') || ['.pdf', '.docx', '.doc', '.txt', '.md'],
+      maxFileSize: parseInt(process.env.STORAGE_MAX_FILE_SIZE || '') || 10 * 1024 * 1024,
       ...config
     };
 

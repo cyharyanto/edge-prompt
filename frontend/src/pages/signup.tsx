@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../services/api';
-import  bcrypt from 'bcryptjs';
-import DOMPurify from "dompurify";
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();

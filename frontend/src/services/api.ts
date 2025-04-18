@@ -32,14 +32,16 @@ export interface UpdateProfileData {
 
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const response = await fetch(`<span class="math-inline">\{API\_BASE\}</span>{endpoint}`, {
+      method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
+      body: options.body ? JSON.stringify(options.body) : undefined,
       ...options,
+      credentials: 'include' //  Crucial line for cookies!
     });
-
     if (!response.ok) {
       const error: ApiError = await response.json();
       throw new Error(error.error || 'API request failed');
@@ -50,7 +52,7 @@ class ApiClient {
 
   // Signup and authentication endpoints - connected to backend index.ts
   async signup(data: SignupData) {
-    return this.request<{ message: string }>('/signup', {
+    return this.request<{ token: string }>('/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     });

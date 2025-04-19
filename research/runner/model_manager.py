@@ -11,8 +11,28 @@ This module separates model access concerns from experiment logic to:
 import json
 import logging
 import os
+import random
+import time
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+# Third-party imports (assuming installed, add try-except blocks for graceful failure)
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
+try:
+    import openai
+except ImportError:
+    openai = None
+try:
+    import requests
+except ImportError:
+    requests = None
+
+# Local application imports
+from .config_loader import ConfigLoader
+from .metrics_collector import MetricsCollector
 
 class MockModel:
     """
@@ -25,243 +45,456 @@ class MockModel:
     - Eliminates network latency and API costs during development
     """
     
-    def __init__(self, model_id: str):
+    def __init__(self, model_id: str, model_type: str = "llm_s"):
         """
         Retains model identity to maintain traceability in mock scenarios.
         
-        Preserving identity:
-        - Ensures mock outputs can be traced to specific model configurations
-        - Allows model-specific mock behavior when needed
-        - Maintains consistency in logs and output analysis
+        Args:
+            model_id: Identifier for the model
+            model_type: Type of model ('llm_l' or 'llm_s')
         """
         self.model_id = model_id
+        self.model_type = model_type
+        self.logger = logging.getLogger(f"edgeprompt.runner.mock_model.{model_id}")
         
-    def generate(self, prompt: str, **kwargs) -> str:
+    def generate(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """
-        Provides predictable outputs to enable reliable testing.
+        Provides predictable outputs to enable reliable testing. Mimics algorithm output.
         
-        Deterministic generation:
-        - Enables exact test assertions without variability
-        - Simplifies debugging by removing model randomness
-        - Creates reproducible test scenarios across environments
+        Args:
+            prompt: The input prompt
+            **kwargs: Additional generation parameters (e.g., max_tokens, temperature, json_output)
+            
+        Returns:
+            Dict containing generation results mimicking algorithm structure.
         """
-        return f"MOCK RESPONSE from model {self.model_id}: This is a response to your prompt"
+        self.logger.debug(f"Generating mock response for prompt (first 50 chars): {prompt[:50]}... Args: {kwargs}")
+        
+        # Simulate processing delay based on prompt length and model type
+        delay = min(0.5 if self.model_type == "llm_s" else 1.5, len(prompt) * 0.0002)
+        time.sleep(delay)
+        
+        # Generate different mock responses based on model type and structure
+        # Determine if JSON output is expected based on common keys
+        expect_json = kwargs.get("json_output", False) or \
+                      kwargs.get("response_format", {}).get("type") == "json_object" or \
+                      "json" in prompt.lower() # Simple heuristic
+        
+        if self.model_type == "llm_l":
+            generated_text = f"MOCK LLM-L RESPONSE from {self.model_id}: This simulates a persona response."
+            if expect_json:
+                # Mimic LLM_L_Interaction output structure (nested under llm_output)
+                mock_obj = {
+                    "role": "teacher" if "teacher" in prompt.lower() else "student",
+                    "content": f"Mock {self.model_id} response with simulated JSON structure",
+                    "evaluation": {
+                        "score": random.randint(6, 9),
+                        "feedback": "This is mock feedback from the LLM-L model.",
+                        "passed": True
+                    }
+                }
+                generated_text = json.dumps(mock_obj)
+            output_key = "llm_output" # Key defined in LLM_L_Interaction spec
+        else:  # llm_s
+            generated_text = f"MOCK LLM-S RESPONSE from {self.model_id}: This simulates an edge model response."
+            if expect_json:
+                 # Mimic EdgeLLMExecution output structure (nested under generated_text)
+                 # Often used for validation stages
+                mock_obj = {
+                    "passed": random.choice([True, True, False]),  # Bias toward passing
+                    "score": random.uniform(0.5, 1.0),
+                    "feedback": "This is mock feedback from the LLM-S validation model.",
+                    "word_count": random.randint(40, 120) # Example extra data
+                }
+                generated_text = json.dumps(mock_obj)
+            output_key = "generated_text" # Key defined in EdgeLLMExecution spec
+        
+        # Estimate token counts based on input/output length
+        # (Very rough estimate, real APIs provide this)
+        prompt_tokens = len(prompt.split())
+        completion_tokens = len(generated_text.split())
+        
+        # Mimic the structure returned by _execute_model_call helper
+        result = {
+            output_key: generated_text,
+            "input_tokens": prompt_tokens,
+            "output_tokens": completion_tokens,
+            "metrics": {
+                 "latency_ms": delay * 1000,
+                 "input_tokens": prompt_tokens,
+                 "output_tokens": completion_tokens,
+                 "tokens_per_second": completion_tokens / delay if delay > 0 else 0
+            }
+        }
+        self.logger.debug(f"Mock generation complete. Result keys: {result.keys()}")
+        return result
         
 class ModelManager:
     """
-    Abstracts model access to enable flexibility and consistency across experiments.
-    
-    This abstraction:
-    - Decouples experiment code from specific model implementations
-    - Provides a single point for model validation and configuration
-    - Enables transparent switching between real and mock models
-    - Centralizes error handling and resource management
+    Abstracts model access for LLM-L (API) and LLM-S (local/API) models.
+
+    Uses ConfigLoader to get model details and MetricsCollector for performance tracking.
+    Aligns with `LLM_L_Interaction` and `EdgeLLMExecution` algorithms.
     """
     
-    def __init__(self, model_cache_dir: Optional[str] = None, 
-                lm_studio_url: Optional[str] = None):
+    def __init__(self, config_loader: ConfigLoader, metrics_collector: MetricsCollector,
+                 lm_studio_url: Optional[str] = None,
+                 openai_api_key: Optional[str] = None,
+                 anthropic_api_key: Optional[str] = None):
         """
-        Supports flexible configuration to accommodate different environments and use cases.
-        
-        This flexibility:
-        - Enables running in various environments without code changes
-        - Allows customization for different storage constraints and network setups
-        - Supports both development and production configurations
-        - Facilitates testing with environment-specific settings
+        Initialize ModelManager.
+
+        Args:
+            config_loader: Instance of ConfigLoader to fetch model configs.
+            metrics_collector: Instance of MetricsCollector for timing/token counts.
+            lm_studio_url: URL for LM Studio API (for some LLM-S).
+            openai_api_key: OpenAI API key (for LLM-L).
+            anthropic_api_key: Anthropic API key (for LLM-L).
         """
         self.logger = logging.getLogger("edgeprompt.runner.model_manager")
+        self.config_loader = config_loader
+        self.metrics_collector = metrics_collector # Store the collector
         
-        # Configure cache directory to persist across sessions while remaining user-specific
-        self.model_cache_dir = model_cache_dir or os.path.expanduser("~/.edgeprompt/models")
-        self._ensure_cache_dir()
+        # Configure API endpoints and keys from args or environment
+        self.lm_studio_url = lm_studio_url or os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1") # Ensure /v1 for completions endpoint
+        self.openai_api_key = openai_api_key or os.environ.get("OPENAI_API_KEY")
+        self.anthropic_api_key = anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY")
         
-        # Allow URL configuration to support different deployment scenarios
-        self.lm_studio_url = lm_studio_url or os.environ.get("LM_STUDIO_URL", "http://localhost:1234")
+        # Cache loaded model instances/clients
+        self.loaded_models: Dict[str, Dict[str, Any]] = {} # Cache stores {model_key: model_data_with_instance/client}
         
-        # Cache loaded models to prevent redundant initialization and improve performance
-        self.loaded_models = {}
+        # Lazy initialization for API clients
+        self._openai_client = None
+        self._anthropic_client = None
         
-        # Centralize configuration to ensure consistency across the application
-        self.model_configs = self._load_model_configs()
+        self.logger.info("ModelManager initialized.")
+        if not self.openai_api_key: self.logger.warning("OpenAI API key not provided.")
+        if not self.anthropic_api_key: self.logger.warning("Anthropic API key not provided.")
+        if not requests: self.logger.warning("`requests` library not installed, LM Studio interaction might fail.")
         
-    def _ensure_cache_dir(self):
+    def _get_openai_client(self):
+        """Lazily initializes and returns the OpenAI client."""
+        if not openai:
+             self.logger.error("OpenAI library not installed. Cannot create client.")
+             raise ImportError("OpenAI library is required.")
+        if not self._openai_client:
+            if not self.openai_api_key:
+                raise ValueError("OpenAI API key is required but not provided.")
+            self._openai_client = openai.OpenAI(api_key=self.openai_api_key)
+        return self._openai_client
+    
+    def _get_anthropic_client(self):
+        """Lazily initializes and returns the Anthropic client."""
+        if not anthropic:
+            self.logger.error("Anthropic library not installed. Cannot create client.")
+            raise ImportError("Anthropic library is required.")
+        if not self._anthropic_client:
+            if not self.anthropic_api_key:
+                 raise ValueError("Anthropic API key is required but not provided.")
+            self._anthropic_client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+        return self._anthropic_client
+    
+    def _initialize_model(self, model_id: str, model_type: str, mock_mode: bool) -> Dict[str, Any]:
         """
-        Prevents runtime errors by validating cache directory access early.
-        
-        Early validation:
-        - Fails fast with clear error messages rather than during model loading
-        - Ensures permissions are appropriate before attempting model operations
-        - Creates necessary directory structure to avoid scattered mkdir calls
+        Helper to initialize or retrieve a model (LLM-L or LLM-S).
+
+        Handles caching, mock mode, and provider-specific setup.
         """
-        try:
-            os.makedirs(self.model_cache_dir, exist_ok=True)
-        except Exception as e:
-            self.logger.error(f"Failed to create model cache directory: {str(e)}")
-            raise RuntimeError(f"Cannot create model cache directory: {str(e)}")
-            
-    def _load_model_configs(self) -> Dict[str, Any]:
-        """
-        Centralizes model configuration to reduce duplication and increase consistency.
-        
-        This centralization:
-        - Provides a single source of truth for model parameters
-        - Simplifies adding or updating models across the system
-        - Reduces the risk of inconsistent configurations
-        - Improves maintainability by isolating configuration changes
-        """
-        # Get the research root directory and look for the config file in configs/
-        research_root = Path(__file__).parent.parent  # Go up one level from runner/ to research/
-        config_path = research_root / "configs" / "model_configs.json"
-        
-        if not config_path.exists():
-            self.logger.warning(f"Model configuration file not found at {config_path}")
-            return {}
-            
-        try:
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-                # Convert list to dict keyed by model_id for easier lookup
-                config_dict = {}
-                for model in config_data:
-                    if "model_id" in model:
-                        config_dict[model["model_id"]] = model
-                
-                return config_dict
-        except Exception as e:
-            self.logger.error(f"Failed to load model configurations: {str(e)}")
-            return {}
-            
-    def initialize_model(self, model_id: str, 
-                         model_config: Optional[Dict[str, Any]] = None,
-                         mock_mode: bool = False) -> Union[Dict[str, Any], MockModel]:
-        """
-        Abstracts model initialization to isolate complexity from experiment code.
-        
-        This abstraction:
-        - Shields experiments from model-specific initialization details
-        - Enables switching between real and mock models transparently
-        - Centralizes error handling for more robust experiments
-        - Provides a consistent interface regardless of model implementation
-        """
-        # Support mock mode for faster development and testing
+        model_key = f"{model_type}:{model_id}"
+        if model_key in self.loaded_models and not mock_mode: # Don't return cached mock model if mock_mode is now False
+             if not self.loaded_models[model_key].get("mock", False): # Ensure cached real model isn't returned in mock_mode
+                 self.logger.info(f"Using cached {model_type.upper()} model: {model_id}")
+                 return self.loaded_models[model_key]
+             else:
+                 # If mock_mode=False but cached model is mock, re-initialize
+                 self.logger.info(f"Re-initializing {model_type.upper()} model {model_id} (was previously mocked).")
+                 del self.loaded_models[model_key]
+        elif mock_mode and model_key in self.loaded_models and self.loaded_models[model_key].get("mock", False):
+             self.logger.info(f"Using cached mock {model_type.upper()} model: {model_id}")
+             return self.loaded_models[model_key]
+
+        # Load model configuration details using ConfigLoader
+        model_config = self.config_loader.load_model_config(model_id)
+        if not model_config:
+            raise ValueError(f"Configuration for {model_type.upper()} model ID '{model_id}' not found.")
+
+        # Create mock model if requested
         if mock_mode:
-            self.logger.info(f"Initializing mock model for {model_id}")
-            mock = MockModel(model_id)
-            
-            # Include mock flag to ensure downstream code knows this is a mock
-            model_metadata = self._get_model_details(model_id, model_config)
-            model_metadata["mock"] = True
-            model_metadata["instance"] = mock
-            
-            return model_metadata
-            
-        # Reuse existing model instances to prevent resource duplication
-        if model_id in self.loaded_models:
-            self.logger.info(f"Using already initialized model: {model_id}")
-            return self.loaded_models[model_id]
-            
-        # Retrieve model configuration with validation
-        model_details = self._get_model_details(model_id, model_config)
-        
-        # Validate model availability before returning to prevent downstream failures
-        if "api_identifier" in model_details:
-            api_id = model_details["api_identifier"]
-            if not self.check_model_availability(api_id):
-                raise ValueError(f"Model {api_id} not available in LM Studio")
-                
-        # Cache for future requests to improve performance
-        self.loaded_models[model_id] = model_details
-        return model_details
-        
-    def check_model_availability(self, api_identifier: str) -> bool:
+            self.logger.info(f"Initializing mock {model_type.upper()}: {model_id}")
+            mock_instance = MockModel(model_id, model_type=model_type)
+            model_config["mock"] = True
+            model_config["instance"] = mock_instance
+            self.loaded_models[model_key] = model_config
+            return model_config
+
+        # Initialize real model based on type and config
+        provider = model_config.get("provider", "").lower()
+        client_type = model_config.get("client_type", "").lower()
+
+        if model_type == "llm_l":
+            if provider == "openai":
+                model_config["client"] = self._get_openai_client()
+            elif provider == "anthropic":
+                 model_config["client"] = self._get_anthropic_client()
+            else:
+                raise ValueError(f"Unsupported provider for LLM-L model {model_id}: {provider}")
+            self.logger.info(f"Initialized LLM-L ({provider}): {model_id}")
+
+        elif model_type == "llm_s":
+            # Currently primarily supports LM Studio compatible endpoints
+            if client_type == "lm_studio" or "local" in client_type: # Assume local means LM Studio for now
+                 # No specific client needed, will use requests in execute_llm_s
+                 model_config["client_type"] = "lm_studio" # Standardize
+                 self.logger.info(f"Prepared LLM-S (LM Studio target): {model_id} at {self.lm_studio_url}")
+                 if not requests:
+                     self.logger.warning("`requests` library needed for LM Studio interaction.")
+            else:
+                 raise ValueError(f"Unsupported client_type for LLM-S model {model_id}: {client_type}")
+
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+
+        model_config["initialized"] = True
+        model_config["mock"] = False
+        self.loaded_models[model_key] = model_config
+        return model_config
+
+    def initialize_llm_l(self, model_id: str, mock_mode: bool = False) -> Dict[str, Any]:
+        """Initializes an LLM-L model using the helper method."""
+        return self._initialize_model(model_id, "llm_l", mock_mode)
+
+    def initialize_llm_s(self, model_id: str, mock_mode: bool = False) -> Dict[str, Any]:
+        """Initializes an LLM-S model using the helper method."""
+        return self._initialize_model(model_id, "llm_s", mock_mode)
+
+    def _execute_model_call(self, model_data: Dict[str, Any], prompt: str,
+                            api_call_func: Callable[..., Tuple[str, int, int]], # Func returning (output_text, in_tokens, out_tokens)
+                            result_key: str # Key for the main output ('generated_text' or 'llm_output')
+                           ) -> Dict[str, Any]:
         """
-        Validates model availability early to prevent failures during experiments.
-        
-        Early validation:
-        - Fails before experiment execution rather than during critical sections
-        - Provides immediate feedback on configuration or connection issues
-        - Prevents wasted resources on experiments that would eventually fail
-        - Improves error messages by identifying missing models explicitly
+        Helper function to wrap model execution, handle timing, metrics, and errors.
         """
+        model_id = model_data.get("model_id", "unknown")
+        self.logger.debug(f"Executing {model_id} with prompt (first 50 chars): {prompt[:50]}...")
+
         try:
-            # Import at runtime to avoid dependency when using mock models
-            from openai import OpenAI
-            
-            client = OpenAI(
-                base_url=f"{self.lm_studio_url}/v1",
-                api_key="lm-studio"
-            )
-            
-            # Check against available models to confirm accessibility
-            models = client.models.list()
-            
-            for model in models.data:
-                if model.id == api_identifier:
-                    self.logger.info(f"Model {api_identifier} is available")
-                    return True
-                    
-            self.logger.warning(f"Model {api_identifier} not found in LM Studio")
-            return False
+            # Start metrics collection before the call
+            self.metrics_collector.start_timer()
+            output_text, input_tokens, output_tokens = api_call_func() # Execute the specific API call
+            self.metrics_collector.stop_timer()
+
+            # Record tokens after the call completes
+            self.metrics_collector.record_tokens(input_tokens, output_tokens)
+            performance_metrics = self.metrics_collector.get_results()
+
+            result = {
+                result_key: output_text,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "metrics": performance_metrics
+            }
+            self.logger.debug(f"Execution successful for {model_id}. Output size: {len(output_text)} chars.")
+            return result
             
         except Exception as e:
-            self.logger.error(f"Error checking model availability: {str(e)}")
-            return False
-            
-    def _get_model_details(self, model_id: str, 
-                          config_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+            # Ensure timer is stopped even if call fails
+            if self.metrics_collector.start_time:
+                self.metrics_collector.stop_timer()
+            self.logger.error(f"Error executing model {model_id}: {str(e)}", exc_info=True)
+            # Return error structure consistent with success structure
+            return {
+                result_key: None,
+                "error": str(e),
+                "input_tokens": len(prompt.split()), # Estimate
+                "output_tokens": 0,
+                "metrics": self.metrics_collector.get_results() # Get latency if timer stopped
+            }
+
+    def execute_llm_l(self, model_data: Dict[str, Any], prompt: str,
+                     params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Balances configuration flexibility with consistency across the system.
-        
-        This approach:
-        - Provides sensible defaults while enabling experiment-specific overrides
-        - Ensures core configuration remains consistent even with overrides
-        - Enables experimentation with different parameters without changing base configs
-        - Maintains backward compatibility when adding new configuration options
+        Execute LLM-L (API model) interaction. Aligns with LLM_L_Interaction algorithm.
+
+        Args:
+            model_data: Model configuration dictionary (from initialize_llm_l).
+            prompt: The prompt string.
+            params: Dictionary of generation parameters (e.g., temperature, max_tokens, response_format).
+
+        Returns:
+            Dictionary containing 'llm_output', token counts, and 'metrics'. Includes 'error' on failure.
         """
-        if model_id not in self.model_configs:
-            raise ValueError(f"Unknown model ID: {model_id}. Add it to model_configs.json first.")
-            
-        # Create copy to prevent modifying shared configuration
-        model_details = dict(self.model_configs[model_id])
-        
-        # Apply experimental overrides while preserving base configuration
-        if config_override:
-            model_details.update(config_override)
-            
-        return model_details
-        
-    def unload_model(self, model_id: str):
+        params = params or {}
+        model_id = model_data.get("model_id", "unknown")
+
+        # Handle mock execution first
+        if model_data.get("mock"):
+            mock_instance: MockModel = model_data.get("instance")
+            return mock_instance.generate(prompt, **params)
+
+        provider = model_data.get("provider", "").lower()
+        client = model_data.get("client")
+        if not client:
+             return {"error": f"LLM-L client for {model_id} not initialized.", "llm_output": None, "metrics": {}}
+
+        def api_call() -> Tuple[str, int, int]:
+            if provider == "openai":
+                if not openai: raise ImportError("OpenAI library not installed.")
+                response_format = params.get("response_format")
+                openai_params = {
+                    "model": model_id,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": params.get("temperature", 0.5),
+                    "max_tokens": params.get("max_tokens", 512),
+                }
+                # Correctly handle JSON mode for OpenAI
+                if isinstance(response_format, dict) and response_format.get("type") == "json_object":
+                     openai_params["response_format"] = {"type": "json_object"}
+
+                response = client.chat.completions.create(**openai_params)
+                output_text = response.choices[0].message.content
+                in_tokens = response.usage.prompt_tokens
+                out_tokens = response.usage.completion_tokens
+                return output_text, in_tokens, out_tokens
+
+            elif provider == "anthropic":
+                if not anthropic: raise ImportError("Anthropic library not installed.")
+                # Anthropic uses 'max_tokens' directly, not 'max_tokens_to_sample' in latest versions
+                response = client.messages.create(
+                    model=model_id,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=params.get("temperature", 0.5),
+                    max_tokens=params.get("max_tokens", 512),
+                )
+                output_text = response.content[0].text
+                in_tokens = response.usage.input_tokens
+                out_tokens = response.usage.output_tokens
+                return output_text, in_tokens, out_tokens
+            else:
+                raise ValueError(f"Unsupported LLM-L provider for execution: {provider}")
+
+        return self._execute_model_call(model_data, prompt, api_call, "llm_output")
+
+    def execute_llm_s(self, model_data: Dict[str, Any], prompt: str,
+                     params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Manages resource lifecycle to prevent memory leaks and resource exhaustion.
-        
-        Explicit resource management:
-        - Prevents memory leaks in long-running applications
-        - Enables loading multiple models in sequence with limited resources
-        - Reduces resource contention in multi-user environments
-        - Ensures deterministic cleanup instead of relying on garbage collection
+        Execute LLM-S (edge model) task. Aligns with EdgeLLMExecution algorithm.
+        Currently assumes LM Studio compatible API endpoint.
+
+        Args:
+            model_data: Model configuration dictionary (from initialize_llm_s).
+            prompt: The prompt string.
+            params: Dictionary of generation parameters (e.g., temperature, max_tokens).
+
+        Returns:
+            Dictionary containing 'generated_text', token counts, and 'metrics'. Includes 'error' on failure.
         """
-        if model_id in self.loaded_models:
-            self.logger.info(f"Unloading model: {model_id}")
-            
-            # Access model instance for cleanup if available
-            model_details = self.loaded_models[model_id]
-            model_instance = model_details.get("instance")
-            
-            # Handle model-specific cleanup operations
-            if model_instance and hasattr(model_instance, "unload"):
-                model_instance.unload()
+        params = params or {}
+        model_id = model_data.get("model_id", "unknown")
+        client_type = model_data.get("client_type", "").lower()
+
+        # Handle mock execution first
+        if model_data.get("mock"):
+            mock_instance: MockModel = model_data.get("instance")
+            return mock_instance.generate(prompt, **params)
+
+        # --- LM Studio Execution Logic ---
+        if client_type == "lm_studio":
+            if not requests:
+                 return {"error": "`requests` library not installed, cannot call LM Studio.", "generated_text": None, "metrics": {}}
+
+            # --- Ensure correct API endpoint construction ---
+            base_url = self.lm_studio_url
+            # Add /v1 if it seems missing (basic check)
+            if not base_url.endswith('/v1') and '/v1/' not in base_url:
+                 # Avoid double slashes if base_url already ends with /
+                 if base_url.endswith('/'):
+                      base_url += 'v1'
+                 else:
+                      base_url += '/v1' 
+            # Construct the final endpoint URL
+            api_url = f"{base_url}/chat/completions"
+            self.logger.debug(f"Constructed LM Studio API URL: {api_url}")
+            # --- End endpoint construction ---
+
+            # Prepare payload (OpenAI compatible)
+            payload = {
+                # Use model_id from config for LM Studio, assuming it matches loaded model ID
+                "model": model_id, 
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": params.get("temperature", 0.7),
+                "max_tokens": params.get("max_tokens", 256), # Typically smaller for edge
+                "stream": False # Expect single response
+            }
+            # --- Removed response_format addition for LM Studio --- 
+            # # Add response_format if requesting JSON (check heuristics)
+            # if params.get("json_output", False) or params.get("response_format", {}).get("type") == "json_object":
+            #      payload["response_format"] = {"type": "json_object"}
+            # --- End removal ---
+
+            headers = {"Content-Type": "application/json"}
+
+            def api_call() -> Tuple[str, int, int]:
+                response = requests.post(api_url, headers=headers, json=payload)
+                response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+                data = response.json()
                 
-            # Remove from cache to free memory
-            del self.loaded_models[model_id]
-            
-    def get_model_info(self, model_id: str) -> Dict[str, Any]:
-        """
-        Separates information access from resource allocation for efficiency.
-        
-        This separation:
-        - Enables lightweight queries without loading models
-        - Supports UI components that display model capabilities
-        - Allows filtering available models by attributes
-        - Facilitates planning before committing resources
-        """
-        return self._get_model_details(model_id) 
+                # --- Added error handling and logging ---
+                try:
+                    # Extract response text
+                    output_text = data['choices'][0]['message']['content']
+                    
+                    # Extract token counts if available
+                    input_tokens = data.get('usage', {}).get('prompt_tokens', 0)
+                    output_tokens = data.get('usage', {}).get('completion_tokens', 0)
+                    
+                    return output_text, input_tokens, output_tokens
+                except KeyError as e:
+                    self.logger.error(f"LM Studio response missing expected key: {e}")
+                    self.logger.error(f"Full response data from LM Studio: {data}")
+                    raise # Re-raise the error after logging
+                # --- End added error handling ---
+
+            return self._execute_model_call(
+                model_data=model_data,  # Pass the full model data dict
+                prompt=prompt, 
+                api_call_func=api_call,
+                result_key="generated_text" # Specify the correct output key for LLM-S
+            )
+
+        else:
+            # Placeholder for other LLM-S clients (e.g., direct Transformers/llama.cpp)
+            self.logger.error(f"LLM-S client type '{client_type}' not implemented for execution.")
+            return {
+                "error": f"LLM-S client type '{client_type}' execution not implemented.",
+                "generated_text": None,
+                "metrics": {}
+            }
+
+    def unload_model(self, model_id: str, model_type: str = "llm_s"):
+        """Removes a model from the cache (conceptual unload)."""
+        model_key = f"{model_type}:{model_id}"
+        if model_key in self.loaded_models:
+            del self.loaded_models[model_key]
+            self.logger.info(f"Unloaded model {model_key} from cache.")
+        else:
+            self.logger.warning(f"Model {model_key} not found in cache for unloading.")
+
+    def get_model_info(self, model_id: str, model_type: str = "llm_s") -> Optional[Dict[str, Any]]:
+        """Retrieves configuration details for a given model ID."""
+        try:
+             config = self.config_loader.load_model_config(model_id)
+             if config:
+                 # Ensure the type matches (check provider for LLM-L, client_type for LLM-S)
+                 is_llm_l = model_type == "llm_l" and config.get("provider") in ["openai", "anthropic"]
+                 is_llm_s = model_type == "llm_s" and "local" in config.get("client_type", "").lower()
+
+                 if (is_llm_l and model_type == "llm_l") or (is_llm_s and model_type == "llm_s"):
+                      return config
+                 else:
+                     self.logger.warning(f"Model ID {model_id} found, but type mismatch (expected {model_type}).")
+                     return None
+             else:
+                 return None
+        except Exception as e:
+            self.logger.error(f"Error retrieving info for model {model_id}: {str(e)}")
+            return None 

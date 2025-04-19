@@ -109,200 +109,280 @@ def load_results(data_dir: str, logger: logging.Logger) -> pd.DataFrame:
     df = pd.json_normalize(results)
     return df
 
-def analyze_multi_stage_validation(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
+def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
     """
-    Analyze multi-stage validation results.
-    
-    Args:
-        df: DataFrame with results
-        output_dir: Directory to save processed results
-        logger: Logger instance
-    """
-    # Check if test_suite_id column exists
-    if 'test_suite_id' not in df.columns:
-        # Try to infer from the file path or result content
-        logger.info("No test_suite_id column found, attempting to infer from data")
-        
-        # Check for paths or filenames containing 'multi_stage_validation'
-        if any(df.get('id', '').str.contains('multi_stage_validation').fillna(False)):
-            df['test_suite_id'] = 'multi_stage_validation'
-        else:
-            # Assume all results are from the most recently run test suite
-            df['test_suite_id'] = 'multi_stage_validation'
-            logger.warning("Assuming all results are from multi_stage_validation test suite")
-    
-    # Filter for multi-stage validation test suite
-    validation_df = df[df['test_suite_id'] == 'multi_stage_validation'].copy()
-    
-    if validation_df.empty:
-        logger.warning("No multi-stage validation results found")
-        return
-        
-    logger.info(f"Analyzing {len(validation_df)} multi-stage validation results")
-    
-    # Create stage effectiveness data
-    stage_data = []
-    
-    # Extract stage results
-    for _, row in validation_df.iterrows():
-        if not isinstance(row.get('validation_result', {}).get('stageResults'), list):
-            continue
-            
-        for stage in row['validation_result']['stageResults']:
-            stage_data.append({
-                'test_case_id': row.get('test_case_id', 'unknown'),
-                'model_id': row.get('model_id', 'unknown'),
-                'hardware_profile': row.get('hardware_profile', 'unknown'),
-                'stage_id': stage.get('stageId', 'unknown'),
-                'passed': stage.get('passed', False),
-                'score': stage.get('score', 0),
-                'execution_time_ms': stage.get('executionTime', 0)
-            })
-    
-    # Convert to DataFrame
-    stage_df = pd.DataFrame(stage_data)
-    
-    if stage_df.empty:
-        logger.warning("No stage data found")
-        return
-        
-    # Calculate stage effectiveness
-    stage_effectiveness = stage_df.groupby('stage_id').agg({
-        'passed': 'mean',  # Pass rate
-        'score': 'mean',   # Average score
-        'execution_time_ms': 'mean',  # Average execution time
-    }).reset_index()
-    
-    stage_effectiveness['passed'] = stage_effectiveness['passed'] * 100  # Convert to percentage
-    
-    # Save to CSV
-    output_file = os.path.join(output_dir, 'validation_stage_effectiveness.csv')
-    stage_effectiveness.to_csv(output_file, index=False)
-    logger.info(f"Saved validation stage effectiveness to {output_file}")
-    
-    # Calculate validation sequence efficiency
-    # First, check if the required columns exist
-    required_cols = ['model_id', 'hardware_profile', 'metrics.execution_time_ms', 'metrics.memory_usage_mb', 'validation_result.isValid']
-    missing_cols = [col for col in required_cols if col not in validation_df.columns]
-    
-    if missing_cols:
-        logger.warning(f"Missing required columns for sequence efficiency analysis: {missing_cols}")
-        return
-    
-    sequence_efficiency = validation_df.groupby(['model_id', 'hardware_profile']).agg({
-        'metrics.execution_time_ms': 'mean',
-        'metrics.memory_usage_mb': 'mean',
-        'validation_result.isValid': 'mean'  # Validation success rate
-    }).reset_index()
-    
-    sequence_efficiency.rename(columns={
-        'metrics.execution_time_ms': 'execution_time_ms',
-        'metrics.memory_usage_mb': 'memory_usage_mb',
-        'validation_result.isValid': 'validation_success_rate'
-    }, inplace=True)
-    
-    sequence_efficiency['validation_success_rate'] = sequence_efficiency['validation_success_rate'] * 100  # Convert to percentage
-    
-    # Save to CSV
-    output_file = os.path.join(output_dir, 'validation_sequence_efficiency.csv')
-    sequence_efficiency.to_csv(output_file, index=False)
-    logger.info(f"Saved validation sequence efficiency to {output_file}")
+    Analyze Phase 1 Scenario comparison results (e.g., A/B testing).
 
-def analyze_hardware_performance(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
-    """
-    Analyze hardware performance across different profiles.
+    Loads detailed run data, extracts metrics for Scenario A and B,
+    calculates aggregate statistics (rates, averages), and saves
+    both detailed and aggregated comparison data to CSV files suitable
+    for the render_figures.py script.
     
     Args:
-        df: DataFrame with results
-        output_dir: Directory to save processed results
-        logger: Logger instance
+        df: DataFrame containing raw results (expecting nested scenario data).
+        output_dir: Directory to save processed CSV results.
+        logger: Logger instance.
     """
-    # Check if required columns exist
-    required_cols = ['hardware_profile', 'model_id', 'metrics.execution_time_ms', 'metrics.memory_usage_mb']
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    
-    if missing_cols:
-        logger.warning(f"Missing required columns for hardware performance analysis: {missing_cols}")
+    logger.info("Starting A/B Comparison Analysis (Phase 1)...")
+
+    # Ensure output directory exists
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+    except OSError as e:
+        logger.error(f"Failed to create output directory {output_dir}: {e}")
+        return # Cannot proceed without output directory
+
+    # Filter DataFrame for relevant rows (containing both scenarios)
+    # Check if scenario data is nested or already flattened
+    if 'scenario_A.status' in df.columns and 'scenario_B.status' in df.columns:
+        # Data seems already normalized/flattened
+        ab_df = df.copy()
+        logger.debug(f"Found {len(ab_df)} rows with flattened scenario data.")
+    elif 'scenario_A' in df.columns and 'scenario_B' in df.columns:
+         # Data needs normalization from nested dicts
+         try:
+             # Check if columns contain dicts or potentially JSON strings
+             if isinstance(df['scenario_A'].iloc[0], str):
+                  df['scenario_A'] = df['scenario_A'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+             if isinstance(df['scenario_B'].iloc[0], str):
+                  df['scenario_B'] = df['scenario_B'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+
+             # Normalize nested data
+             ab_df = pd.json_normalize(df.to_dict('records'), sep='.')
+             logger.debug(f"Normalized nested scenario data. Resulting columns: {ab_df.columns.tolist()}")
+         except Exception as e:
+             logger.error(f"Error normalizing nested scenario data: {e}", exc_info=True)
+             return
+    else:
+         logger.warning("Could not find 'scenario_A' and 'scenario_B' columns/data for A/B analysis. Skipping.")
+         return
+
+    if ab_df.empty:
+        logger.warning("No A/B comparison results found after filtering/normalization. Skipping.")
         return
         
-    # Group by hardware profile and model
-    hardware_df = df.groupby(['hardware_profile', 'model_id']).agg({
-        'metrics.execution_time_ms': ['mean', 'std'],
-        'metrics.memory_usage_mb': ['mean', 'max']
-    }).reset_index()
+    logger.info(f"Processing {len(ab_df)} A/B comparison results entries.")
+
+    # Check for variant_id column or add default if missing
+    if 'variant_id' not in ab_df.columns:
+        logger.info("No 'variant_id' column found. Adding default 'standard' variant ID.")
+        ab_df['variant_id'] = 'standard'
     
-    # Flatten the column names
-    hardware_df.columns = [
-        '_'.join(col).strip('_') for col in hardware_df.columns.values
-    ]
+    # Get unique variants
+    variants = ab_df['variant_id'].unique()
+    logger.info(f"Found {len(variants)} Scenario A variants: {variants}")
+
+    # --- Extract Key Metrics Per Run --- 
+    # Initialize list to store extracted data for each run
+    detailed_comparison_records = []
+
+    for _, row in ab_df.iterrows():
+        record = {
+            # Identifiers
+            'run_id': row.get('id', 'unknown'),
+            'test_case_id': row.get('test_case_id', 'unknown'),
+            'llm_l_model_id': row.get('llm_l_model_id', 'unknown'),
+            'llm_s_model_id': row.get('llm_s_model_id', 'unknown'),
+            'hardware_profile': row.get('hardware_profile', 'unknown'),
+            'variant_id': row.get('variant_id', 'standard')
+        }
+
+        # --- Scenario A Metrics --- 
+        # Safety (derived from constraints)
+        a_constraint_violations = row.get('scenario_A.steps.constraint_enforcement.violations', [])
+        # Ensure violations is a list before processing
+        if not isinstance(a_constraint_violations, list):
+             a_constraint_violations = [] 
+        record['safety_violation_A'] = int(any("prohibited keyword" in str(v).lower() for v in a_constraint_violations))
+        # Constraint Adherence
+        record['constraint_passed_A'] = int(row.get('scenario_A.steps.constraint_enforcement.passed', False))
+        # Validation
+        record['validation_passed_A'] = int(row.get('scenario_A.final_decision.passed_validation', False))
+        record['validation_score_A'] = pd.to_numeric(row.get('scenario_A.final_decision.final_score'), errors='coerce')
+        # Performance
+        record['total_tokens_A'] = pd.to_numeric(row.get('scenario_A.total_metrics.total_tokens'), errors='coerce')
+        record['latency_ms_A'] = pd.to_numeric(row.get('scenario_A.total_metrics.latency_ms'), errors='coerce')
+
+        # --- Scenario B Metrics ---
+        # Safety (derived from constraints)
+        b_constraint_violations = row.get('scenario_B.steps.constraint_enforcement.violations', [])
+        if not isinstance(b_constraint_violations, list):
+             b_constraint_violations = []
+        record['safety_violation_B'] = int(any("prohibited keyword" in str(v).lower() for v in b_constraint_violations))
+        # Constraint Adherence
+        record['constraint_passed_B'] = int(row.get('scenario_B.steps.constraint_enforcement.passed', False))
+        # Baseline Evaluation (use this for B's pass/score)
+        record['evaluation_passed_B'] = int(row.get('scenario_B.final_decision.passed_evaluation', False))
+        record['evaluation_score_B'] = pd.to_numeric(row.get('scenario_B.final_decision.final_score'), errors='coerce')
+        # Performance
+        record['total_tokens_B'] = pd.to_numeric(row.get('scenario_B.total_metrics.total_tokens'), errors='coerce')
+        record['latency_ms_B'] = pd.to_numeric(row.get('scenario_B.total_metrics.latency_ms'), errors='coerce')
+
+        detailed_comparison_records.append(record)
+
+    if not detailed_comparison_records:
+        logger.warning("No detailed comparison records generated. Cannot proceed with aggregation.")
+        return
     
-    # Calculate tokens per second (if available)
-    if 'output_length' in df.columns and 'metrics.execution_time_ms' in df.columns:
-        # Group again to get tokens_per_second
-        tokens_df = df.copy()
-        tokens_df['tokens_per_second'] = tokens_df['output_length'] / (tokens_df['metrics.execution_time_ms'] / 1000)
+    # --- Create Detailed DataFrame --- 
+    detailed_df = pd.DataFrame(detailed_comparison_records)
+    # Handle potential NaN values resulting from coerce errors or missing data
+    numeric_cols = ['safety_violation_A', 'constraint_passed_A', 'validation_passed_A', 'validation_score_A', 'total_tokens_A', 'latency_ms_A',
+                    'safety_violation_B', 'constraint_passed_B', 'evaluation_passed_B', 'evaluation_score_B', 'total_tokens_B', 'latency_ms_B']
+    for col in numeric_cols:
+        if col in detailed_df.columns:
+            detailed_df[col] = detailed_df[col].fillna(0)
+
+    # Save detailed results
+    detailed_file = os.path.join(output_dir, 'ab_comparison_detailed.csv')
+    detailed_df.to_csv(detailed_file, index=False)
+    logger.info(f"Saved detailed A/B comparison results to {detailed_file}")
+
+    # --- Aggregate Results for Visualization --- 
+    # Group by relevant factors (e.g., llm_s_model, hardware_profile, variant_id)
+    grouping_factors = ['llm_s_model_id', 'hardware_profile', 'variant_id']
+    # Check if factors exist
+    valid_grouping_factors = [f for f in grouping_factors if f in detailed_df.columns]
+    if not valid_grouping_factors:
+        logger.warning("Cannot group results: Missing grouping columns. Aggregating overall.")
+        # Aggregate overall if grouping factors are missing
+        agg_df = detailed_df[numeric_cols].agg(['mean', 'sum', 'count']).T # Added sum for counts
+        # Need to restructure agg_df slightly if aggregated overall
+        agg_df_mean = detailed_df[numeric_cols].mean().to_frame('mean')
+        agg_df_sum = detailed_df[numeric_cols].sum().to_frame('sum')
+        agg_df_count = pd.Series({'count': len(detailed_df)})
+        agg_df = pd.concat([agg_df_mean, agg_df_sum], axis=1).T
+        agg_df['overall_group'] = 'Overall' # Add a dummy grouping column
+        agg_df = agg_df.reset_index().rename(columns={'index': 'metric'}) 
+        # This overall aggregation might need adjustment depending on how specific metrics are calculated below
+        # For simplicity, we'll focus on the grouped aggregation first. Need to rethink the overall case.
+        logger.error("Overall aggregation case not fully implemented for specific comparison CSVs. Please ensure grouping factors exist.")
+        return # Exit if grouping factors are missing, as the logic below depends on them.
         
-        tokens_summary = tokens_df.groupby(['hardware_profile', 'model_id']).agg({
-            'tokens_per_second': ['mean', 'std']
+    else:
+        logger.info(f"Aggregating results by: {valid_grouping_factors}")
+        # Calculate both mean and sum for rate calculations, count comes along
+        agg_funcs = {col: ['mean', 'sum'] for col in numeric_cols}
+        agg_df = detailed_df.groupby(valid_grouping_factors).agg(agg_funcs)
+        agg_df.columns = ['_'.join(col).strip() for col in agg_df.columns.values] # Flatten MultiIndex
+        agg_df['count'] = detailed_df.groupby(valid_grouping_factors).size() # Add count separately
+        agg_df = agg_df.reset_index()
+
+
+    if agg_df.empty:
+        logger.warning("Aggregation resulted in an empty DataFrame. Skipping aggregated CSV output.")
+        return
+        
+    # --- Calculate Comparative Metrics and Save Specific CSVs ---
+    
+    # Make sure count is present for rate calculations
+    if 'count' not in agg_df.columns:
+         logger.error("Aggregation failed to produce a 'count' column. Cannot calculate rates.")
+         return
+
+    # Safety Comparison (Violation Rate)
+    try:
+        safety_df = agg_df[valid_grouping_factors].copy()
+        # Calculate rates using sum / count
+        safety_df['safety_violation_rate_A'] = (agg_df['safety_violation_A_sum'] / agg_df['count']) * 100
+        safety_df['safety_violation_rate_B'] = (agg_df['safety_violation_B_sum'] / agg_df['count']) * 100
+        safety_df['safety_rate_difference'] = safety_df['safety_violation_rate_A'] - safety_df['safety_violation_rate_B']
+        safety_file = os.path.join(output_dir, 'safety_comparison.csv')
+        safety_df.to_csv(safety_file, index=False, float_format='%.2f')
+        logger.info(f"Saved safety comparison results to {safety_file}")
+    except KeyError as e:
+        logger.warning(f"Could not generate safety_comparison.csv. Missing column: {e}")
+    except Exception as e:
+        logger.error(f"Error generating safety_comparison.csv: {e}", exc_info=True)
+
+
+    # Constraint Adherence Comparison (Pass Rate)
+    try:
+        constraint_df = agg_df[valid_grouping_factors].copy()
+         # Calculate rates using sum / count
+        constraint_df['constraint_pass_rate_A'] = (agg_df['constraint_passed_A_sum'] / agg_df['count']) * 100
+        # Note: Scenario B uses 'evaluation_passed_B' as its primary pass metric per extraction logic
+        constraint_df['constraint_pass_rate_B'] = (agg_df['evaluation_passed_B_sum'] / agg_df['count']) * 100 
+        constraint_df['constraint_rate_difference'] = constraint_df['constraint_pass_rate_A'] - constraint_df['constraint_pass_rate_B']
+        constraint_file = os.path.join(output_dir, 'constraint_comparison.csv')
+        constraint_df.to_csv(constraint_file, index=False, float_format='%.2f')
+        logger.info(f"Saved constraint comparison results to {constraint_file}")
+    except KeyError as e:
+        logger.warning(f"Could not generate constraint_comparison.csv. Missing column: {e}")
+    except Exception as e:
+        logger.error(f"Error generating constraint_comparison.csv: {e}", exc_info=True)
+
+    # Token Usage Comparison (Relative Efficiency)
+    try:
+        token_df = agg_df[valid_grouping_factors].copy()
+        token_df['avg_tokens_A'] = agg_df['total_tokens_A_mean']
+        token_df['avg_tokens_B'] = agg_df['total_tokens_B_mean']
+        token_df['token_usage_ratio'] = token_df['avg_tokens_A'] / token_df['avg_tokens_B']
+        token_df['token_difference'] = token_df['avg_tokens_A'] - token_df['avg_tokens_B']
+        token_file = os.path.join(output_dir, 'token_usage_comparison.csv')
+        token_df.to_csv(token_file, index=False, float_format='%.2f')
+        logger.info(f"Saved token usage comparison results to {token_file}")
+    except KeyError as e:
+        logger.warning(f"Could not generate token_usage_comparison.csv. Missing column: {e}")
+    except Exception as e:
+        logger.error(f"Error generating token_usage_comparison.csv: {e}", exc_info=True)
+
+    # Latency Comparison 
+    try:
+        latency_df = agg_df[valid_grouping_factors].copy()
+        latency_df['avg_latency_A'] = agg_df['latency_ms_A_mean']
+        latency_df['avg_latency_B'] = agg_df['latency_ms_B_mean']
+        latency_df['latency_ratio'] = latency_df['avg_latency_A'] / latency_df['avg_latency_B']
+        latency_df['latency_difference'] = latency_df['avg_latency_A'] - latency_df['avg_latency_B']
+        latency_file = os.path.join(output_dir, 'latency_comparison.csv')
+        latency_df.to_csv(latency_file, index=False, float_format='%.2f')
+        logger.info(f"Saved latency comparison results to {latency_file}")
+    except KeyError as e:
+        logger.warning(f"Could not generate latency_comparison.csv. Missing column: {e}")
+    except Exception as e:
+        logger.error(f"Error generating latency_comparison.csv: {e}", exc_info=True)
+        
+    # Save aggregated results (all metrics) 
+    aggregated_file = os.path.join(output_dir, 'ab_comparison_aggregated.csv')
+    agg_df.to_csv(aggregated_file, index=False)
+    logger.info(f"Saved aggregated A/B comparison results to {aggregated_file}")
+    
+    # Generate variant comparison summary
+    try:
+        variant_df = agg_df.groupby(['variant_id']).agg({
+            'safety_violation_A_mean': 'mean',
+            'safety_violation_B_mean': 'mean',
+            'constraint_passed_A_mean': 'mean',
+            'constraint_passed_B_mean': 'mean',
+            'validation_passed_A_mean': 'mean',
+            'evaluation_passed_B_mean': 'mean',
+            'validation_score_A_mean': 'mean',
+            'evaluation_score_B_mean': 'mean',
+            'total_tokens_A_mean': 'mean',
+            'total_tokens_B_mean': 'mean',
+            'latency_ms_A_mean': 'mean',
+            'latency_ms_B_mean': 'mean',
+            'count': 'sum'
         }).reset_index()
         
-        tokens_summary.columns = [
-            '_'.join(col).strip('_') for col in tokens_summary.columns.values
-        ]
+        variant_df['token_usage_ratio'] = variant_df['total_tokens_A_mean'] / variant_df['total_tokens_B_mean']
+        variant_df['latency_ratio'] = variant_df['latency_ms_A_mean'] / variant_df['latency_ms_B_mean']
+        variant_df['validation_score_diff'] = variant_df['validation_score_A_mean'] - variant_df['evaluation_score_B_mean']
         
-        # Merge with hardware_df
-        hardware_df = pd.merge(
-            hardware_df, 
-            tokens_summary, 
-            on=['hardware_profile', 'model_id'],
-            how='left'
-        )
-    
-    # Save to CSV
-    output_file = os.path.join(output_dir, 'hardware_performance.csv')
-    hardware_df.to_csv(output_file, index=False)
-    logger.info(f"Saved hardware performance data to {output_file}")
+        variant_file = os.path.join(output_dir, 'variant_comparison.csv')
+        variant_df.to_csv(variant_file, index=False, float_format='%.4f')
+        logger.info(f"Saved variant comparison summary to {variant_file}")
+    except Exception as e:
+        logger.error(f"Error generating variant_comparison.csv: {e}", exc_info=True)
 
-def analyze_neural_symbolic_effectiveness(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
-    """
-    Analyze the effectiveness of neural-symbolic validation.
-    
-    Args:
-        df: DataFrame with results
-        output_dir: Directory to save processed results
-        logger: Logger instance
-    """
-    # Filter for neural symbolic validation test suite
-    neural_df = df[df['test_suite_id'] == 'neural_symbolic_validation'].copy()
-    
-    if neural_df.empty:
-        logger.warning("No neural-symbolic validation results found")
-        return
-        
-    logger.info(f"Analyzing {len(neural_df)} neural-symbolic validation results")
-    
-    # Extract template information
-    neural_df['template_type'] = neural_df['template_id'].fillna('unknown')
-    
-    # Create effectiveness metrics
-    effectiveness_df = neural_df.groupby(['template_type', 'model_id']).agg({
-        'validation_result.isValid': 'mean',  # Safety compliance rate
-        'validation_result.score': 'mean',    # Educational quality
-        'metrics.execution_time_ms': 'mean'   # Performance
-    }).reset_index()
-    
-    effectiveness_df.rename(columns={
-        'validation_result.isValid': 'safety_compliance_rate',
-        'validation_result.score': 'educational_quality',
-        'metrics.execution_time_ms': 'execution_time_ms'
-    }, inplace=True)
-    
-    effectiveness_df['safety_compliance_rate'] = effectiveness_df['safety_compliance_rate'] * 100  # Convert to percentage
-    
-    # Save to CSV
-    output_file = os.path.join(output_dir, 'neural_symbolic_effectiveness.csv')
-    effectiveness_df.to_csv(output_file, index=False)
-    logger.info(f"Saved neural-symbolic effectiveness data to {output_file}")
+# Placeholder for other analysis functions (Phase 2 or specific tests)
+def analyze_multi_stage_validation(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
+    logger.info("Multi-stage validation analysis not implemented for Phase 1 focus.")
+    pass
+
+def analyze_resource_optimization(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
+    logger.info("Resource optimization analysis not implemented for Phase 1 focus.")
+    pass
 
 def parse_args():
     """Parse command line arguments"""
@@ -314,14 +394,22 @@ def parse_args():
         '--data-dir',
         type=str,
         default='../data/raw',
-        help='Directory containing raw results (default: ../data/raw)'
+        help='Directory containing raw results data (JSONL or JSON files)'
     )
     
     parser.add_argument(
         '--output-dir',
         type=str,
         default='../data/processed',
-        help='Directory for saving processed results (default: ../data/processed)'
+        help='Directory for saving processed data (CSV files)'
+    )
+    
+    parser.add_argument(
+        '--analysis-type',
+        type=str,
+        choices=['all', 'ab_comparison', 'multi_stage', 'resource'],
+        default='ab_comparison',
+        help='Type of analysis to perform (default: ab_comparison for Phase 1)'
     )
     
     parser.add_argument(
@@ -341,26 +429,24 @@ def main():
     # Set up logging
     logger = setup_logging(args.log_level)
     
-    # Ensure output directory exists
-    os.makedirs(args.output_dir, exist_ok=True)
-    
-    logger.info(f"Starting analysis of results from {args.data_dir}")
-    
     # Load results
-    results_df = load_results(args.data_dir, logger)
+    df = load_results(args.data_dir, logger)
     
-    if results_df.empty:
-        logger.error("No results to analyze")
-        return 1
+    if df.empty:
+        logger.error("No results data loaded. Exiting analysis.")
+        sys.exit(1)
+    
+    # Perform requested analysis
+    if args.analysis_type == 'all' or args.analysis_type == 'ab_comparison':
+        analyze_scenario_comparison(df, args.output_dir, logger)
         
-    # Perform analyses
-    analyze_multi_stage_validation(results_df, args.output_dir, logger)
-    analyze_hardware_performance(results_df, args.output_dir, logger)
-    analyze_neural_symbolic_effectiveness(results_df, args.output_dir, logger)
-    
-    logger.info(f"Analysis complete. Processed data saved to {args.output_dir}")
-    
-    return 0
+    if args.analysis_type == 'all' or args.analysis_type == 'multi_stage':
+        analyze_multi_stage_validation(df, args.output_dir, logger)
+        
+    if args.analysis_type == 'all' or args.analysis_type == 'resource':
+        analyze_resource_optimization(df, args.output_dir, logger)
+
+    logger.info("Analysis finished.")
 
 if __name__ == '__main__':
-    sys.exit(main()) 
+    main() 

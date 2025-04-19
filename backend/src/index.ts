@@ -82,8 +82,8 @@ app.post('/api/signup', async (req, res) => {
   
   try {
     //5. Create user in databse
-    await db.registerUser(user);
-    console.log("User created in database:", user);
+    const regUser = await db.registerUser(user);
+    console.log("User created in database:", regUser);
 
     //6.. Assign role to user
     const role = await db.getRoleByName(roleName);
@@ -93,25 +93,24 @@ app.post('/api/signup', async (req, res) => {
       }
     await db.assignRoleToUser(id, role.id);
 
-
     // 6. Generate a JWT
     const token = jwt.sign(
         { userId: id, email: email, role: roleName }, // Use roleName in payload
         jwtSecret, // Replace with your secret key
         { expiresIn: '1h' }
     );
-
-    // 7. Set the cookie in the response headers
-    res.cookie('authToken', token, {
-      httpOnly: true,  //  Crucial for XSS protection
-      secure: process.env.NODE_ENV === 'production', //  Only send over HTTPS in production
-      sameSite: 'strict', //  Recommended for CSRF protection
-      maxAge: 60 * 60 * 1000, //  1 hour (in milliseconds) - match JWT expiration
-      path: '/', //  Cookie is valid for the entire domain
-    });
+    console.log("JWT generated:", token);
+    // // 7. Set the cookie in the response headers
+    // res.cookie('authToken', token, {
+    //   httpOnly: true,  //  Crucial for XSS protection
+    //   secure: process.env.NODE_ENV === 'production', //  Only send over HTTPS in production
+    //   sameSite: 'strict', //  Recommended for CSRF protection
+    //   maxAge: 60 * 60 * 1000, //  1 hour (in milliseconds) - match JWT expiration
+    //   path: '/', //  Cookie is valid for the entire domain
+    // });
 
     // 8. Respond with success and the token
-    res.status(201).json({ message: 'User created successfully'});
+    res.status(201).json({ message: 'User created successfully', token });
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });
   }
@@ -151,17 +150,17 @@ app.post('/api/signin', async (req, res) => {
     );
     console.log("JWT generated:", token);
 
-    // 6. Set the cookie in the response headers
-    res.cookie('authToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 1000,
-      path: '/',
-    });
+    // // 6. Set the cookie in the response headers
+    // res.cookie('authToken', token, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   sameSite: 'strict',
+    //   maxAge: 60 * 60 * 1000,
+    //   path: '/',
+    // });
 
     // 7. Respond with token
-    res.json({ message: 'Signin successful' });
+    res.json({ message: 'Signin successful', token });
 
   } catch (err) {
     res.status(500).json({ error: 'Login failed', details: err.message });

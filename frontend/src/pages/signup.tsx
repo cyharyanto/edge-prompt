@@ -21,7 +21,7 @@ const SignUpPage: React.FC = () => {
     email: "",
     password: "",
     dob: "",
-    roleName: "student", // Default role
+    roleName: "",
   });
 
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -45,12 +45,16 @@ const SignUpPage: React.FC = () => {
     const newErrors: Errors = {};
 
     //Error in firstname
-    if (!formData.firstname.trim() || formData.firstname.trim().length < 2) {
+    if (!formData.firstname.trim()) {
+      newErrors.firstname = "First name is required";
+    } else if (formData.firstname.trim().length < 2) {
       newErrors.firstname = "First name must be at least 2 characters";
     }
 
     //Error in lastname
-    if (!formData.lastname.trim() || formData.lastname.trim().length < 2) {
+    if (!formData.lastname.trim()) {
+      newErrors.lastname = "Last name is required";
+    } else if (formData.lastname.trim().length < 2) {
       newErrors.lastname = "Last name must be at least 2 characters";
     }
 

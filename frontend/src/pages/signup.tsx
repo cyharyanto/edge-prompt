@@ -28,7 +28,7 @@ const SignUpPage: React.FC = () => {
 
   const [message, setMessage] = useState("");
 
-  const [error, setError] = useState<Errors>({});
+  const [errors, setErrors] = useState<Errors>({});
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -38,6 +38,56 @@ const SignUpPage: React.FC = () => {
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
+  };
+
+  // Handle form validation
+  const validateForm = () => {
+    const newErrors: Errors = {};
+
+    //Error in firstname
+    if (!formData.firstname.trim() || formData.firstname.trim().length < 2) {
+      newErrors.firstname = "First name must be at least 2 characters";
+    }
+
+    //Error in lastname
+    if (!formData.lastname.trim() || formData.lastname.trim().length < 2) {
+      newErrors.lastname = "Last name must be at least 2 characters";
+    }
+
+    //Error in email
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Email format is invalid";
+    }
+
+    //Error in password
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    } else if (!/[A-Z]/.test(formData.password)) {
+      newErrors.password = "Password must contain an uppercase character";
+    } else if (!/[a-z]/.test(formData.password)) {
+      newErrors.password = "Password must contain a lowercase character";
+    } else if (!/[0-9]/.test(formData.password)) {
+      newErrors.password = "Password must contain a number";
+    }
+
+    //Error in DOB
+    if (!formData.dob) {
+      newErrors.dob = "Date of birth is required";
+    } else if (new Date(formData.dob) >= new Date()) {
+      newErrors.dob = "Date of birth must be in the past";
+    }
+
+    //Error in role
+    if (!formData.roleName) {
+      newErrors.roleName = "Please select a role.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   // Handle form submission - connected to api.ts

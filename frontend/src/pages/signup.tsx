@@ -93,6 +93,7 @@ const SignUpPage: React.FC = () => {
   // Handle form submission - connected to api.ts
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     try {
       const signupData = {
         firstname: DOMPurify.sanitize(formData.firstname),
@@ -113,6 +114,7 @@ const SignUpPage: React.FC = () => {
         dob: "",
         roleName: "",
       });
+      setErrors({});
       navigate("/");
     } catch (error: any) {
       setMessage(
@@ -134,13 +136,13 @@ const SignUpPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="form-control"
+              className={`form-control ${errors.firstname ? "is-invalid" : ""}`}
               id="firstname"
               name="firstname"
               value={formData.firstname}
               onChange={handleInputChange}
-              required
             />
+            <div className="invalid-feedback">{errors.firstname}</div>
           </div>
 
           <div className="mb-3">
@@ -149,13 +151,13 @@ const SignUpPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="form-control"
+              className={`form-control ${errors.lastname ? "is-invalid" : ""}`}
               id="lastname"
               name="lastname"
               value={formData.lastname}
               onChange={handleInputChange}
-              required
             />
+            <div className="invalid-feedback">{errors.lastname}</div>
           </div>
 
           <div className="mb-3">
@@ -164,13 +166,13 @@ const SignUpPage: React.FC = () => {
             </label>
             <input
               type="email"
-              className="form-control"
+              className={`form-control ${errors.email ? "is-invalid" : ""}`}
               id="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              required
             />
+            <div className="invalid-feedback">{errors.email}</div>
           </div>
 
           <div className="mb-3">
@@ -180,13 +182,15 @@ const SignUpPage: React.FC = () => {
             <div className="input-group">
               <input
                 type={passwordVisible ? "text" : "password"}
-                className="form-control"
+                className={`form-control ${
+                  errors.password ? "is-invalid" : ""
+                }`}
                 id="password"
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                required
               />
+
               <button
                 type="button"
                 className="btn btn-outline-secondary"
@@ -195,6 +199,7 @@ const SignUpPage: React.FC = () => {
                 {passwordVisible ? "Hide" : "Show"}
               </button>
             </div>
+            <div className="invalid-feedback d-block">{errors.password}</div>
           </div>
 
           <div className="mb-3">
@@ -203,13 +208,13 @@ const SignUpPage: React.FC = () => {
             </label>
             <input
               type="date"
-              className="form-control"
+              className={`form-control ${errors.dob ? "is-invalid" : ""}`}
               id="dob"
               name="dob"
               value={formData.dob}
               onChange={handleInputChange}
-              required
             />
+            <div className="invalid-feedback">{errors.dob}</div>
           </div>
 
           {/* New Role Selection Section */}
@@ -218,16 +223,17 @@ const SignUpPage: React.FC = () => {
               Role
             </label>
             <select
-              className="form-select"
+              className={`form-control ${errors.roleName ? "is-invalid" : ""}`}
               id="role"
               name="roleName"
               value={formData.roleName}
               onChange={handleInputChange}
-              required
             >
+              <option value="">Select Role</option>
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
             </select>
+            <div className="invalid-feedback">{errors.roleName}</div>
           </div>
 
           <button type="submit" className="btn btn-primary w-100">

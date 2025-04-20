@@ -1,7 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from '../services/api';
-import DOMPurify from 'dompurify';
+import { api } from "../services/api";
+import DOMPurify from "dompurify";
+
+type Errors = {
+  firstname?: string;
+  lastname?: string;
+  email?: string;
+  password?: string;
+  dob?: string;
+  roleName?: string;
+};
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,14 +21,18 @@ const SignUpPage: React.FC = () => {
     email: "",
     password: "",
     dob: "",
-    roleName: "student" // Default role
+    roleName: "student", // Default role
   });
 
   const [passwordVisible, setPasswordVisible] = useState(false);
 
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const [error, setError] = useState<Errors>({});
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -37,22 +50,24 @@ const SignUpPage: React.FC = () => {
         email: DOMPurify.sanitize(formData.email),
         password: DOMPurify.sanitize(formData.password),
         dob: DOMPurify.sanitize(formData.dob),
-        roleName: formData.roleName
-      }
-      
+        roleName: formData.roleName,
+      };
+
       await api.signup(signupData);
-      setMessage('Account created successfully!');
+      setMessage("Account created successfully!");
       setFormData({
         firstname: "",
         lastname: "",
         email: "",
         password: "",
         dob: "",
-        roleName:""
+        roleName: "",
       });
       navigate("/");
     } catch (error: any) {
-      setMessage(`Signup failed: ${error.response?.data?.error || error.message}`);
+      setMessage(
+        `Signup failed: ${error.response?.data?.error || error.message}`
+      );
     }
   };
 
@@ -63,7 +78,6 @@ const SignUpPage: React.FC = () => {
           <i className="bi bi-person-plus"></i> Sign Up
         </h2>
         <form onSubmit={handleSubmit}>
-
           <div className="mb-3">
             <label htmlFor="firstname" className="form-label">
               First Name
@@ -166,15 +180,12 @@ const SignUpPage: React.FC = () => {
             </select>
           </div>
 
-
           <button type="submit" className="btn btn-primary w-100">
             Sign Up
           </button>
         </form>
 
-        <p className="text-center mt-3">
-          Already have an account?{" "}
-        </p>
+        <p className="text-center mt-3">Already have an account? </p>
       </div>
     </div>
   );

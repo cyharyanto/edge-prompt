@@ -32,13 +32,19 @@ export interface UpdateProfileData {
 
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const token = localStorage.getItem('authToken'); //  Get the token from local storage
+
+    const requestOptions: RequestInit = {
+      method: options.method || 'GET',
+      ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}), // Add Authorization if token exists
       },
-      ...options,
-    });
+    };
+
+    const response = await fetch(`${API_BASE}${endpoint}`, requestOptions);
 
     if (!response.ok) {
       const error: ApiError = await response.json();

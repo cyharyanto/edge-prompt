@@ -16,6 +16,8 @@ import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authMiddleware, jwtSecret} from './middleware/authMiddleware.js';
+import escape from 'escape-html';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -413,25 +415,29 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
     // --- Metadata Validation ---
     const errors: string[] = [];
 
-    // Trim whitespace from all string inputs
+    const metadata = JSON.parse(req.body.metadata || '{}');
+
+    // --- Metadata Validation and Escaping ---
+    const errors: string[] = [];
+
     if (metadata.focusArea) {
-      metadata.focusArea = metadata.focusArea.trim();
+      metadata.focusArea = escape(metadata.focusArea.trim());
     }
 
     if (metadata.title) {
-      metadata.title = metadata.title.trim();
+      metadata.title = escape(metadata.title.trim());
     }
 
     if (metadata.subject) {
-      metadata.subject = metadata.subject.trim();
+      metadata.subject = escape(metadata.subject.trim());
     }
 
     if (metadata.grade) {
-      metadata.grade = metadata.grade.trim();
+      metadata.grade = escape(metadata.grade.trim());
     }
 
     if (metadata.chapter) {
-      metadata.chapter = metadata.chapter.trim();
+      metadata.chapter = escape(metadata.chapter.trim());
     }
 
     // Validate metadata fields

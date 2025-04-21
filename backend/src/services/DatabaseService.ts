@@ -630,7 +630,9 @@ export class DatabaseService {
       throw error; // Propagate the error to the caller
     }
   }
-
+  async deleteUserById(userId: string): Promise<void> {
+    await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
+    
   //From here on, we are adding the role and permission management functions
 
   //Function to create new role

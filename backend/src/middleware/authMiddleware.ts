@@ -42,7 +42,12 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
         try {
             const decoded = jwt.verify(token, jwtSecret);
-            req.user = decoded;
+            req.user = {
+                userId: (decoded as any).id,
+                email: (decoded as any).email,
+                role: (decoded as any).role
+              };
+            next();
 
             // Determine the required permission
             const basePath = getBasePath(req.path);

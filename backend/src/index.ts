@@ -54,7 +54,7 @@ const upload = multer({ storage: storageMulter });
 app.post('/api/signup', async (req, res) => {
   console.log("Received signup request:", req.body);
   const { firstname, lastname, email, password, dob, roleName } = req.body;
-  console.log("Parsed signup data:", { firstname, lastname, email, password, dob, roleName });
+  console.log("Parsed signup data:", { firstname, lastname, email, password, dob, roleName });``
 
   // 1. Input Validation
   if (!firstname || !lastname || !email || !password || !dob || !roleName) {
@@ -409,6 +409,70 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
       res.status(400).json({ error: 'Project ID is required' });
       return;
     }
+
+    // --- Metadata Validation ---
+    const errors: string[] = [];
+
+    // Trim whitespace from all string inputs
+    if (metadata.focusArea) {
+      metadata.focusArea = metadata.focusArea.trim();
+    }
+
+    if (metadata.title) {
+      metadata.title = metadata.title.trim();
+    }
+
+    if (metadata.subject) {
+      metadata.subject = metadata.subject.trim();
+    }
+
+    if (metadata.grade) {
+      metadata.grade = metadata.grade.trim();
+    }
+
+    if (metadata.chapter) {
+      metadata.chapter = metadata.chapter.trim();
+    }
+
+    // Validate metadata fields
+    if (!metadata.focusArea) {
+      errors.push('focusArea is required');
+    } else if (typeof metadata.focusArea !== 'string' || metadata.focusArea.length > 100) {
+      errors.push('focusArea must be a string and no longer than 100 characters');
+      console.log('focusArea is invalid:', metadata.focusArea);
+    }
+
+    if (metadata.title && (typeof metadata.title !== 'string' || metadata.title.length > 255)) {
+      errors.push('title must be a string and no longer than 255 characters');
+      console.log('title is invalid:', metadata.title);
+    }
+
+    if (metadata.subject && (typeof metadata.subject !== 'string' || metadata.subject.length > 100)) {
+      errors.push('subject must be a string and no longer than 100 characters');
+      console.log('subject is invalid:', metadata.subject);
+    }
+
+    if (metadata.grade && (typeof metadata.grade !== 'string' || metadata.grade.length > 50)) {
+      errors.push('grade must be a string and no longer than 50 characters');
+      console.log('grade is invalid:', metadata.grade);
+    }
+
+    if (metadata.chapter && (typeof metadata.chapter !== 'string' || metadata.chapter.length > 100)) {
+      errors.push('chapter must be a string and no longer than 100 characters');
+      console.log('chapter is invalid:', metadata.chapter);
+    }
+
+    if (metadata.useSourceLanguage && typeof metadata.useSourceLanguage !== 'boolean') {
+      errors.push('useSourceLanguage must be a boolean');
+      console.log('useSourceLanguage is invalid:', metadata.useSourceLanguage);s
+    }
+
+    if (errors.length > 0) {
+      res.status(400).json({ error: 'Invalid metadata', details: errors });
+      console.log('Metadata validation errors:', errors);
+      return;
+    }
+    // --- End of Metadata Validation ---
 
     // Extract content from file
     const material: MaterialSource = {

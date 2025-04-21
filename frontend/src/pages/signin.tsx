@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../services/api';
+import DOMPurify from 'dompurify';
 
 export const SigninPage: React.FC = () => {
   // State variables to handle form inputs, errors, and loading state
@@ -8,6 +9,15 @@ export const SigninPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const togglePasswordVisibility = () => {
+    setPasswordVisible(!passwordVisible);
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(event.target.value);
+  };
   
   // Hook for navigating to different routes
   const navigate = useNavigate();
@@ -25,8 +35,8 @@ export const SigninPage: React.FC = () => {
 
     try {
       const userToSubmit = {
-        email: email,
-        password: password,
+        email: DOMPurify.sanitize(email),
+        password: DOMPurify.sanitize(password),
       }
 
       const response = await api.signin(userToSubmit);
@@ -91,19 +101,29 @@ export const SigninPage: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="password" className="form-label">
-                Password
-              </label>
+            <label htmlFor="passwordhash" className="form-label">
+              Password
+            </label>
+            <div className="input-group">
               <input
-                type="password"
+                type={passwordVisible ? "text" : "password"}
                 className="form-control"
                 id="password"
-                placeholder="Enter your password"
+                name="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handleInputChange}
                 required
               />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={togglePasswordVisibility}
+              >
+                {passwordVisible ? "Hide" : "Show"}
+              </button>
             </div>
+          </div>
+
 
             <div className="d-grid">
               <button

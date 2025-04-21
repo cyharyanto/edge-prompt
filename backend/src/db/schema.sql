@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS responses (
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
 );
 
-DROP TABLE IF EXISTS users;
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
@@ -68,6 +67,38 @@ CREATE TABLE IF NOT EXISTS users (
   passwordhash TEXT NOT NULL,
   dob TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+--Creating role TABLE
+CREATE TABLE IF NOT EXISTS roles (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,  -- e.g., 'teacher', 'student', 'admin'
+    description TEXT
+);
+
+--Creating permissions TABLE
+CREATE TABLE IF NOT EXISTS permissions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,  -- e.g., 'create_project', 'edit_material', 'view_user_data'
+    description TEXT
+);
+
+--Junction table to associate roles with permissions
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id TEXT NOT NULL,
+    permission_id TEXT NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (permission_id) REFERENCES permissions(id)
+);
+
+--Junction table to associate users with roles
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id TEXT NOT NULL,
+    role_id TEXT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
 -- Indexes for better query performance

@@ -15,6 +15,7 @@ export interface SignupData {
   email: string;
   password: string;
   dob: string;
+  roleName: string;
 }
 
 export interface SigninData {
@@ -31,13 +32,19 @@ export interface UpdateProfileData {
 
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const token = localStorage.getItem('authToken'); //  Get the token from local storage
+
+    const requestOptions: RequestInit = {
+      method: options.method || 'GET',
+      ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}), // Add Authorization if token exists
       },
-      ...options,
-    });
+    };
+
+    const response = await fetch(`${API_BASE}${endpoint}`, requestOptions);
 
     if (!response.ok) {
       const error: ApiError = await response.json();
@@ -49,7 +56,7 @@ class ApiClient {
 
   // Signup and authentication endpoints - connected to backend index.ts
   async signup(data: SignupData) {
-    return this.request<{ message: string }>('/signup', {
+    return this.request<{ token: string }>('/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     });

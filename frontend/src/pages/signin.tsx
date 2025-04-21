@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from '../services/api';
-import DOMPurify from 'dompurify';
+import { api } from "../services/api";
+import DOMPurify from "dompurify";
 
 export const SigninPage: React.FC = () => {
   // State variables to handle form inputs, errors, and loading state
@@ -18,7 +18,7 @@ export const SigninPage: React.FC = () => {
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(event.target.value);
   };
-  
+
   // Hook for navigating to different routes
   const navigate = useNavigate();
   // Handles form submission for login.
@@ -37,27 +37,27 @@ export const SigninPage: React.FC = () => {
       const userToSubmit = {
         email: DOMPurify.sanitize(email),
         password: DOMPurify.sanitize(password),
-      }
+      };
 
       const response = await api.signin(userToSubmit);
-      
+
       // Navigate to the home page on successful login
       if (response && response.token) {
         //  Assuming the backend sends a 'token' property
         localStorage.setItem("authToken", response.token); //  Securely store the token
         navigate("/"); // Navigate to the home page
       } else {
-      setError("Login failed. Please try again."); //  Generic error
+        setError("Login failed. Please try again."); //  Generic error
       }
       // Clear input fields after successful login
       setEmail("");
       setPassword("");
-    } catch (err:any) {
+    } catch (err: any) {
       //  Handle specific API errors
-      if (err.message === 'Invalid credentials') {
-        setError('Invalid email or password.');
-      } else if (err.message === 'User not found') {
-        setError('User with this email not found.');
+      if (err.message === "Invalid credentials") {
+        setError("Invalid email or password.");
+      } else if (err.message === "User not found") {
+        setError("User with this email not found.");
       } else {
         setError(err.message || "Login failed due to an unexpected error.");
       }
@@ -73,7 +73,7 @@ export const SigninPage: React.FC = () => {
         <div className="card-header bg-primary text-white text-center">
           <h4 className="mb-0">
             <i className="bi bi-braces me-2"></i>
-            EdgePrompt Login
+            EdgePrompt Sign In
           </h4>
         </div>
         <div className="card-body">
@@ -101,29 +101,28 @@ export const SigninPage: React.FC = () => {
             </div>
 
             <div className="mb-3">
-            <label htmlFor="passwordhash" className="form-label">
-              Password
-            </label>
-            <div className="input-group">
-              <input
-                type={passwordVisible ? "text" : "password"}
-                className="form-control"
-                id="password"
-                name="password"
-                value={password}
-                onChange={handleInputChange}
-                required
-              />
-              <button
-                type="button"
-                className="btn btn-outline-secondary"
-                onClick={togglePasswordVisibility}
-              >
-                {passwordVisible ? "Hide" : "Show"}
-              </button>
+              <label htmlFor="passwordhash" className="form-label">
+                Password
+              </label>
+              <div className="input-group">
+                <input
+                  type={passwordVisible ? "text" : "password"}
+                  className="form-control"
+                  id="password"
+                  name="password"
+                  value={password}
+                  onChange={handleInputChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={togglePasswordVisibility}
+                >
+                  {passwordVisible ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
-          </div>
-
 
             <div className="d-grid">
               <button

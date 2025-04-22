@@ -245,7 +245,11 @@ const SignUpPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="text-center mt-3">Already have an account? </p>
+        <div className="text-center mt-3">
+          <small className="text-muted">
+          Already have an account? <a href="/login">Sign in</a>
+          </small>
+        </div>
       </div>
     </div>
   );

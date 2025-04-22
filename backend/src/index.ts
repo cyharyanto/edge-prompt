@@ -56,7 +56,7 @@ const upload = multer({ storage: storageMulter });
 app.post('/api/signup', async (req, res) => {
   console.log("Received signup request:", req.body);
   const { firstname, lastname, email, password, dob, roleName } = req.body;
-  console.log("Parsed signup data:", { firstname, lastname, email, password, dob, roleName });``
+  console.log("Parsed signup data:", { firstname, lastname, email, password, dob, roleName });
 
   // 1. Input Validation
   if (!firstname || !lastname || !email || !password || !dob || !roleName) {
@@ -189,6 +189,8 @@ app.delete('/api/account', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error deleting account:', err);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 app.get('/api/health', async (_req, res): Promise<void> => {
   try {
@@ -434,11 +436,6 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
       return;
     }
 
-    // --- Metadata Validation ---
-    const errors: string[] = [];
-
-    const metadata = JSON.parse(req.body.metadata || '{}');
-
     // --- Metadata Validation and Escaping ---
     const errors: string[] = [];
 
@@ -492,7 +489,7 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
 
     if (metadata.useSourceLanguage && typeof metadata.useSourceLanguage !== 'boolean') {
       errors.push('useSourceLanguage must be a boolean');
-      console.log('useSourceLanguage is invalid:', metadata.useSourceLanguage);s
+      console.log('useSourceLanguage is invalid:', metadata.useSourceLanguage);
     }
 
     if (errors.length > 0) {

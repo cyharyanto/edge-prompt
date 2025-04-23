@@ -1,35 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-  //This will need to be changed & moved once implemented
-  type Class = {
-    id: string;
-    name: string;
-  };
+type Class = {
+  id: string;
+  name: string;
+};
 
-  let placeholderClasses = [{
-    id: "1",
-    name: "English"
-  },
-  {
-    id: "2",
-    name: "Science"
-  }]
-
+const placeholderClasses: Class[] = [
+  { id: "1", name: "English" },
+  { id: "2", name: "Science" },
+  { id: "3", name: "Mathematics" },
+  { id: "4", name: "History" }
+];
 
 const StudentDashboard: React.FC = () => {
   const [studentName, setStudentName] = useState("Student");
   const [classes, setClasses] = useState<Class[]>([]);
   const navigate = useNavigate();
 
-  
-
-  
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        
-        setStudentName("John"); 
+        setStudentName("John");
       } catch (err) {
         console.error("Failed to fetch student data:", err);
       }
@@ -48,56 +40,67 @@ const StudentDashboard: React.FC = () => {
   }, []);
 
   const handleLogout = () => {
-    //FIX-ME: implement logic for this
-    navigate("/login");
+    navigate("/");
   };
 
   return (
     <div className="container-fluid">
-      {/* Header/Nav (FR3) */}
       <header className="bg-primary text-white p-3 mb-4">
         <div className="d-flex justify-content-between align-items-center">
           <h1 className="h4 mb-0">
             <i className="bi bi-braces"></i> EdgePrompt
           </h1>
           <nav className="ms-auto d-flex align-items-center gap-3">
-            <span>Home</span>
-            <span>Profile</span>
+            <button className="btn btn-light btn-sm">Home</button>
+            <button className="btn btn-light btn-sm">Profile</button>
             <button
               className="btn btn-outline-light btn-sm"
               onClick={handleLogout}
             >
-              <i className="bi bi-box-arrow-right me-1"></i> Logout
+            <i className="bi bi-box-arrow-right me-1"></i> Logout
             </button>
           </nav>
         </div>
       </header>
 
-      {/* Welcome Message (FR1) */}
       <h2 className="mb-4">Welcome, {studentName}!</h2>
 
-      {/* Upcoming Assignments Section (FR2) */}
-      <section className="mb-5">
-        <h4>Upcoming Assignments</h4>
-        <ul>
-          <li>Assignment 1 - Placeholder</li>
-          <li>Assignment 2 - Coming Soon</li>
-        </ul>
-      </section>
-
-      {/* Current Classes (FR5) */}
-      <section>
-        <h4>Your Classes</h4>
-        {classes.length > 0 ? (
-          <ul>
+      <div className="row">
+        <div className="col-md-9">
+          <div className="row g-3">
             {classes.map((cls) => (
-              <li key={cls.id}>{cls.name}</li>
+              <div className="col-md-6 col-lg-4" key={cls.id}>
+                <div className="card shadow-sm h-100">
+                  <div className="card-body text-center">
+                    <h5 className="card-title">{cls.name}</h5>
+                    <button className="btn btn-outline-primary btn-sm">View Class</button>
+                  </div>
+                </div>
+              </div>
             ))}
-          </ul>
-        ) : (
-          <p>No classes enrolled yet.</p>
-        )}
-      </section>
+          </div>
+        </div>
+
+        <div className="col-md-3">
+          <div className="card shadow-sm">
+            <div className="card-header bg-light">
+              <h5 className="mb-0">
+                <i className="bi bi-journal-text me-1"></i> Upcoming Assignments
+              </h5>
+            </div>
+            <div className="card-body">
+              <ul className="list-unstyled mb-0">
+                <li className="mb-2">
+                  <strong>Assignment 1:</strong> Placeholder
+                </li>
+                <li>
+                  <strong>Assignment 2:</strong> Coming Soon
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

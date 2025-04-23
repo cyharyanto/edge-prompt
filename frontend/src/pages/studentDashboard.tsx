@@ -91,10 +91,10 @@ const StudentDashboard: React.FC = () => {
             <div className="card-body">
               <ul className="list-unstyled mb-0">
                 <li className="mb-2">
-                  <strong>Assignment 1:</strong> Placeholder
+                  <strong>Assignment 1:</strong> Homework
                 </li>
                 <li>
-                  <strong>Assignment 2:</strong> Coming Soon
+                  <strong>Assignment 2:</strong> Homework
                 </li>
               </ul>
             </div>

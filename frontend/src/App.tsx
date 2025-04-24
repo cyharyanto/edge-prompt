@@ -13,7 +13,7 @@ import HomePage from "./pages/homepage";
 import SignUpPage from "./pages/signup";
 import LoginPage from "./pages/signin";
 import Dashboard from "./pages/dashboard";
-import TeacherDashboard from "./pages/teacherDashboard";
+import TeacherDashboard from "./pages/teacher/teacherDashboard";
 
 const App: React.FC = () => {
   return (

@@ -125,14 +125,6 @@ class ApiClient {
     return this.request<Class>(`/classes/${id}`);
   }
 
-  // Create a new class
-  async createClass(classData: Omit<Class, 'id'>) {
-    return this.request<Class>('/classes', {
-      method: 'POST',
-      body: JSON.stringify(classData),
-    });
-  }
-
   // Update class details
   async updateClass(id: string, classData: Partial<Class>) {
     return this.request<Class>(`/classes/${id}`, {
@@ -179,10 +171,12 @@ class ApiClient {
     return this.request<{ id: string; name: string; email: string }[]>(`/classes/${classId}/students`);
   }
 
-  // Get available students for class assignment (students not yet assigned to any class)
-  async getAvailableStudents() {
-    return this.request<{ id: string; name: string; email: string }[]>('/users/students/available');
-  }
+  // Get available students for class assignment
+  async getAvailableStudentsForClass(classId: string) {
+    return this.request<{ id: string; name: string; email: string }[]>(
+      `/classes/${classId}/students/available`
+    );
+  }  
 
   async createProject(project: Omit<Project, 'id' | 'createdAt'>) {
     return this.request<Project>('/projects', {

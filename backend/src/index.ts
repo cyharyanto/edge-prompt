@@ -83,7 +83,6 @@ app.post('/api/signup', async (req, res) => {
 
   
   try {
-    console.log("In try");
     //5. Create user in databse
     const regUser = await db.registerUser(user);
     console.log("User created in database:", regUser);

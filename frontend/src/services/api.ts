@@ -56,7 +56,7 @@ class ApiClient {
 
   // Signup and authentication endpoints - connected to backend index.ts
   async signup(data: SignupData) {
-    return this.request<{ token: string }>('/signup', {
+    return this.request<{ message: String }>('/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -64,7 +64,7 @@ class ApiClient {
 
   // Signin and authentication endpoints - connected to backend index.ts
   async signin(data: SigninData) {
-    return this.request<{ token: string }>('/signin', {
+    return this.request<{ message: String, token: string, role: string }>('/signin', {
       method: 'POST',
       body: JSON.stringify(data),
     });

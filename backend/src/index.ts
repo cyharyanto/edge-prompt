@@ -95,24 +95,8 @@ app.post('/api/signup', async (req, res) => {
       }
     await db.assignRoleToUser(id, role.id);
 
-    // 6. Generate a JWT
-    const token = jwt.sign(
-        { userId: id, email: email, role: roleName }, // Use roleName in payload
-        jwtSecret, // Replace with your secret key
-        { expiresIn: '1h' }
-    );
-    console.log("JWT generated:", token);
-    // // 7. Set the cookie in the response headers
-    // res.cookie('authToken', token, {
-    //   httpOnly: true,  //  Crucial for XSS protection
-    //   secure: process.env.NODE_ENV === 'production', //  Only send over HTTPS in production
-    //   sameSite: 'strict', //  Recommended for CSRF protection
-    //   maxAge: 60 * 60 * 1000, //  1 hour (in milliseconds) - match JWT expiration
-    //   path: '/', //  Cookie is valid for the entire domain
-    // });
-
-    // 8. Respond with success and the token
-    res.status(201).json({ message: 'User created successfully', token });
+    // 6. Respond with success
+    res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });
   }
@@ -152,17 +136,8 @@ app.post('/api/signin', async (req, res) => {
     );
     console.log("JWT generated:", token);
 
-    // // 6. Set the cookie in the response headers
-    // res.cookie('authToken', token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production',
-    //   sameSite: 'strict',
-    //   maxAge: 60 * 60 * 1000,
-    //   path: '/',
-    // });
-
-    // 7. Respond with token
-    res.json({ message: 'Signin successful', token });
+    // 6. Respond with token
+    res.json({ message: 'Signin successful', token, role: userRole });
 
   } catch (err) {
     res.status(500).json({ error: 'Login failed', details: err.message });

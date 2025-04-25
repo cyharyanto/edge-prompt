@@ -108,7 +108,7 @@ const SignUpPage: React.FC = () => {
         roleName: formData.roleName,
       };
 
-      const reponse = await api.signup(signupData);
+      const response = await api.signup(signupData);
       setMessage("Account created successfully!");
       // Clear input fields after successful signup
       setFormData({

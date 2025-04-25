@@ -32,6 +32,7 @@ const dummyStudents: Student[] = [
 const ManageClass: React.FC = () => {
   // Get classId from URL parameters
   const { classId } = useParams<{ classId: string }>();
+  // const history = useHistory();
   const navigate = useNavigate();
 
   // State for class data and form handling
@@ -98,7 +99,33 @@ const ManageClass: React.FC = () => {
     };
 
     fetchClassData();
+    // const fetchClassDetails = async () => {
+    //   try {
+    //     const classData = await new ApiClient().getClass(classId);
+    //     setClassDetails(classData);
+    //     const classStudents = await new ApiClient().getClassStudents(classId);
+    //     setStudents(classStudents);
+    //     setLoading(false);
+    //   } catch (err) {
+    //     setError('Failed to load class details');
+    //     setLoading(false);
+    //   }
+    // };
+
+    // fetchClassDetails();
   }, [classId]);
+
+  // const handleDeleteClass = async () => {
+  //   if (window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) {
+  //     try {
+  //       await new ApiClient().deleteClass(classId);
+  //       alert('Class deleted successfully!');
+  //       history.push('/classes');  // Redirect to the classes list page
+  //     } catch (err) {
+  //       alert('Error deleting class');
+  //     }
+  //   }
+  // };
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -464,6 +491,9 @@ const ManageClass: React.FC = () => {
                       "Save Changes"
                     )}
                   </button>
+                  {/* <button onClick={handleDeleteClass} style={{ backgroundColor: 'red', color: 'white' }}>
+                    Delete Class
+                  </button> */}
                 </div>
               </form>
             </div>

@@ -58,6 +58,12 @@ CREATE TABLE IF NOT EXISTS responses (
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
 );
 
+CREATE TABLE IF NOT EXISTS class (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,

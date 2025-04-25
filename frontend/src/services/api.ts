@@ -30,6 +30,14 @@ export interface UpdateProfileData {
   dob: string;
 }
 
+export interface Class {
+  id?: string;
+  name: string;
+  description: string;
+  students: string[];
+  teacherId?: string;
+}
+
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = localStorage.getItem('authToken'); //  Get the token from local storage
@@ -104,6 +112,76 @@ class ApiClient {
   // Project endpoints
   async getProjects() {
     return this.request<Project[]>('/projects');
+  }
+
+  // Class endpoints
+  // Get all classes for a teacher
+  async getClasses() {
+    return this.request<Class[]>('/classes');
+  }
+
+  // Get a specific class by ID
+  async getClass(id: string) {
+    return this.request<Class>(`/classes/${id}`);
+  }
+
+  // Create a new class
+  async createClass(classData: Omit<Class, 'id'>) {
+    return this.request<Class>('/classes', {
+      method: 'POST',
+      body: JSON.stringify(classData),
+    });
+  }
+
+  // Update class details
+  async updateClass(id: string, classData: Partial<Class>) {
+    return this.request<Class>(`/classes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(classData),
+    });
+  }
+
+  // Delete a class
+  async deleteClass(id: string) {
+    return this.request(`/classes/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Student Management Endpoints for Class
+  // Add a student to a class
+  async addStudentToClass(classId: string, studentId: string) {
+    return this.request<{ message: string }>(`/classes/${classId}/students`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId }),
+    });
+  }
+
+  // Remove a student from a class
+  async removeStudentFromClass(classId: string, studentId: string) {
+    return this.request<{ message: string }>(`/classes/${classId}/students/${studentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Get all students (for selecting students to add to class)
+  async getStudents() {
+    return this.request<{ id: string; name: string; email: string }[]>('/users/students');
+  }
+
+  // Get a specific student by ID (for managing a student's details within a class)
+  async getStudentById(studentId: string) {
+    return this.request<{ id: string; name: string; email: string }>(`/users/students/${studentId}`);
+  }
+
+  // Get students enrolled in a specific class
+  async getClassStudents(classId: string) {
+    return this.request<{ id: string; name: string; email: string }[]>(`/classes/${classId}/students`);
+  }
+
+  // Get available students for class assignment (students not yet assigned to any class)
+  async getAvailableStudents() {
+    return this.request<{ id: string; name: string; email: string }[]>('/users/students/available');
   }
 
   async createProject(project: Omit<Project, 'id' | 'createdAt'>) {

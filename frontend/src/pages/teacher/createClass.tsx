@@ -2,14 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const dummyStudents = [
-  { id: "1", name: "Student A" },
-  { id: "2", name: "Student B" },
-  { id: "3", name: "Student C" },
-  { id: "4", name: "Student D" },
-  { id: "5", name: "Student E" },
-  { id: "6", name: "Student F" },
-  { id: "7", name: "Student G" },
-  { id: "8", name: "Student H" },
+  { id: "1", name: "John Doe" },
+  { id: "2", name: "Alice Smith" },
+  { id: "3", name: "Mark Rob" },
+  { id: "4", name: "Simon Tell" },
+  { id: "5", name: "John Matthew" },
+  { id: "6", name: "Francis Co" },
+  { id: "7", name: "Isaac Smith" },
+  { id: "8", name: "Matt Smith" },
+  { id: "9", name: "John Matt" },
 ];
 
 const CreateClass: React.FC = () => {
@@ -94,7 +95,7 @@ const CreateClass: React.FC = () => {
 
               <form onSubmit={handleSubmit} noValidate>
                 <div className="mb-3">
-                  <label htmlFor="className" className="form-label">Class Name</label>
+                  <label htmlFor="className" className="form-label fw-semibold">Class Name</label>
                   <input
                     type="text"
                     className={`form-control ${errors.className ? "is-invalid" : ""}`}
@@ -107,7 +108,7 @@ const CreateClass: React.FC = () => {
                 </div>
 
                 <div className="mb-3">
-                  <label htmlFor="description" className="form-label">Class Description (optional)</label>
+                  <label htmlFor="description" className="form-label fw-semibold">Class Description (optional)</label>
                   <input
                     type="text"
                     className="form-control"

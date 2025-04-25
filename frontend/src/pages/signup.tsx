@@ -108,8 +108,9 @@ const SignUpPage: React.FC = () => {
         roleName: formData.roleName,
       };
 
-      await api.signup(signupData);
+      const reponse = await api.signup(signupData);
       setMessage("Account created successfully!");
+      // Clear input fields after successful signup
       setFormData({
         firstname: "",
         lastname: "",
@@ -119,7 +120,8 @@ const SignUpPage: React.FC = () => {
         roleName: "",
       });
       setErrors({});
-      navigate("/");
+      navigate("/login");
+
     } catch (error: any) {
       setMessage(
         `Signup failed: ${error.response?.data?.error || error.message}`

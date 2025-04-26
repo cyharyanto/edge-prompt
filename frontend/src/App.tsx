@@ -13,6 +13,8 @@ import HomePage from "./pages/homepage";
 import SignUpPage from "./pages/signup";
 import LoginPage from "./pages/signin";
 import Dashboard from "./pages/dashboard";
+import StudentDashboard from "./pages/studentDashboard";
+import TeacherDashboard from "./pages/teacherDashboard";
 
 const App: React.FC = () => {
   return (
@@ -29,6 +31,10 @@ const App: React.FC = () => {
 
             {/* Main dashboard */}
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/student" element={<StudentDashboard />} />
+
+            {/* Teacher dashboard */}
+            <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
 
             {/* Fallback route - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

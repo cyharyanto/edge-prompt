@@ -630,6 +630,22 @@ export class DatabaseService {
       throw error; // Propagate the error to the caller
     }
   }
+
+  //Function to get user's information when logged in
+  async getUserById(userId: string): Promise<User | null> {
+    try {
+      const stmt = this.prepareStatement(`
+        SELECT id, firstname, lastname, email, passwordhash, dob, created_at
+        FROM users
+        WHERE id = ?
+      `);
+      const user = stmt.get(userId) as User | undefined;
+      return user || null;
+    } catch (error) {
+      console.error('Error in getUserById:', error);
+      throw error;
+    }
+  }  
   async deleteUserById(userId: string): Promise<void> {
     await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
   }

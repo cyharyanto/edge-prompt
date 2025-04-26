@@ -167,6 +167,31 @@ app.delete('/api/account', authMiddleware, async (req, res) => {
   }
 });
 
+// Profile Endpoint - return logged-in user's info
+app.get('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = await db.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.json({
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      dob: user.dob,
+    });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
 app.get('/api/health', async (_req, res): Promise<void> => {
   try {
     const isLMStudioAvailable = await lmStudio.isAvailable();

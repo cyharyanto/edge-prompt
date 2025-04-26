@@ -37,45 +37,44 @@ function getBasePath(path: string): string {
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
 
-    if (authHeader) {
-        const token = authHeader.split(' ')[1]; // Extract token from "Bearer <token>"
+    if (!authHeader) {
+        return res.status(401).json({ message: 'No token provided' });  
+    }
 
-        try {
-            const decoded = jwt.verify(token, jwtSecret);
-            req.user = {
-                userId: (decoded as any).id,
-                email: (decoded as any).email,
-                role: (decoded as any).role
-              };
-            next();
+    const token = authHeader.split(' ')[1]; // Extract token from "Bearer <token>"
 
-            // Determine the required permission
-            const basePath = getBasePath(req.path);
-            const fullPath = req.path;
-            let requiredPermission = routePermissions[fullPath] || routePermissions[basePath] ;
+    try {
+        const decoded = jwt.verify(token, jwtSecret);
+        req.user = {
+            userId: (decoded as any).userId,
+            email: (decoded as any).email,
+            role: (decoded as any).role
+        };
 
-            if (requiredPermission) {
-                const db = new DatabaseService();
-                db.getUserPermissions(decoded.userId)
-                    .then(userPermissions => {
-                        if (userPermissions.includes(requiredPermission)) {
-                            next();
-                        } else {
-                            res.status(403).json({ message: 'Unauthorized' });
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Database error checking permissions:", err);
-                        res.status(500).json({ message: 'Internal server error' });
-                    });
-            } else {
-                next(); // No specific permission required
-            }
+        // Determine the required permission
+        const basePath = getBasePath(req.path);
+        const fullPath = req.path;
+        let requiredPermission = routePermissions[fullPath] || routePermissions[basePath];
 
-        } catch (error) {
-            res.status(401).json({ message: 'Invalid token' });
+        if (requiredPermission) {
+            const db = new DatabaseService();
+            db.getUserPermissions((decoded as any).userId)
+                .then(userPermissions => {
+                    if (userPermissions.includes(requiredPermission)) {
+                        next(); // Permission granted
+                    } else {
+                        return res.status(403).json({ message: 'Unauthorized' }); 
+                    }
+                })
+                .catch(err => {
+                    console.error("Database error checking permissions:", err);
+                    return res.status(500).json({ message: 'Internal server error' }); 
+                });
+        } else {
+            next(); // No specific permission required
         }
-    } else {
-        res.status(401).json({ message: 'No token provided' });
+
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid token' });  
     }
 }

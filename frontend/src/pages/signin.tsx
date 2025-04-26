@@ -45,7 +45,6 @@ export const SigninPage: React.FC = () => {
       if (response && response.token && response.role) {
         //  Assuming the backend sends a 'token' property
         localStorage.setItem("authToken", response.token); //  Securely store the token
-
         //Page navigation based on user role
         const role = response.role;
         if (role === "teacher") {

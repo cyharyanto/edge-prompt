@@ -713,6 +713,62 @@ export class DatabaseService {
       return result.map((row: any) => row.name);
   }
 
+  // Classrom functions
+  async createClassroom(name: string, description?: string): Promise<string> {
+    const stmt = this.prepareStatement(`
+        INSERT INTO classrooms (id, name, description) VALUES (?, ?, ?)
+    `);
+    const id = uuid();
+    await stmt.run(id, name, description);
+    return id;
+  }
+
+  async getClassroom(id: string): Promise<any> {
+      const stmt = this.prepareStatement(`
+          SELECT * FROM classrooms WHERE id = ?
+      `);
+      return stmt.get(id);
+  }
+
+  async getClassroomsForTeacher(userId: string): Promise<any[]> {
+      const stmt = this.prepareStatement(`
+          SELECT c.* FROM classrooms c
+          JOIN classroom_teachers ct ON c.id = ct.classroom_id
+          WHERE ct.user_id = ?
+      `);
+      return stmt.all(userId);
+  }
+
+  async addTeacherToClassroom(classroomId: string, userId: string): Promise<void> {
+      const stmt = this.prepareStatement(`
+          INSERT INTO classroom_teachers (classroom_id, user_id) VALUES (?, ?)
+      `);
+      await stmt.run(classroomId, userId);
+  }
+
+  async addStudentToClassroom(classroomId: string, userId: string): Promise<void> {
+      const stmt = this.prepareStatement(`
+          INSERT INTO classroom_students (classroom_id, user_id) VALUES (?, ?)
+      `);
+      await stmt.run(classroomId, userId);
+  }
+
+  async getStudentsInClassroom(classroomId: string): Promise<any[]> {
+      const stmt = this.prepareStatement(`
+          SELECT u.* FROM users u
+          JOIN classroom_students cs ON u.id = cs.user_id
+          WHERE cs.classroom_id = ?
+      `);
+      return stmt.all(classroomId);
+  }
+
+  async getMaterialsForClassroom(classroomId: string): Promise<any[]> {
+      const stmt = this.prepareStatement(`
+          SELECT * FROM materials WHERE classroom_id = ?
+      `);
+      return stmt.all(classroomId);
+  }
+  
   close() {
     this.db.close();
   }

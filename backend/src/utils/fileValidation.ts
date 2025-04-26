@@ -1,10 +1,14 @@
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'fs/promises';
 
-const EXT_WHITELIST = new Set(['txt', 'pdf']);        // FR-4
-const MIME_WHITELIST = new Set([                      // FR-2
-  'text/plain',
-  'application/pdf'
+const EXT_WHITELIST = new Set(['txt', 'pdf', 'doc', 'docx', 'md']);
+const MIME_WHITELIST = new Set([  
+    'text/plain',
+    'text/markdown',
+    'application/pdf',
+    'application/msword',
+    'application/x-cfb',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
 
 /**
@@ -28,18 +32,31 @@ export async function validateUploadedFile(
   /* ---------- 2) deep-inspect magic bytes (FR-1/2) ----- */
   const detected = await fileTypeFromFile(filePath);
 
-  if (!detected) {
+  let mime = detected?.mime ?? (ext === 'md' ? 'text/markdown' : undefined);
+  /* ---------- OOXML (docx) special-case -------------------------- */
+    if (ext === 'docx' && mime === 'application/zip') {
+        // A real docx is a ZIP container – treat it as docx for our whitelist
+        mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+
+    // ── Legacy .doc special-case (OLE/CFB) ────────────
+    if (ext === 'doc' && mime === 'application/x-cfb') {
+        mime = 'application/msword';
+    }
+
+  if (!mime) {
     await unlink(filePath);
     throw new Error('Unable to determine file type');
   }
-  if (!MIME_WHITELIST.has(detected.mime)) {
+
+  if (!MIME_WHITELIST.has(mime)) {
     await unlink(filePath);
-    throw new Error(`Detected MIME "${detected.mime}" is not allowed`);
+    throw new Error(`Detected MIME "${mime}" is not allowed`);
   }
 
   /* ---------- 3) success  ------------------------------ */
   console.info(
-    `[UPLOAD] user:${userId ?? 'anon'} → ${originalName} accepted as ${detected.mime}`
+    `[UPLOAD] user:${userId ?? 'anon'} → ${originalName} accepted as ${mime}`
   );
-  return detected.mime;
+  return mime;
 }

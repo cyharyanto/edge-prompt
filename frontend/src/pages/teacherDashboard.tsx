@@ -24,7 +24,6 @@ const TeacherDashboard: React.FC = () => {
     const fetchTeacherData = async () => {
       try {
         const profile = await api.getProfile();
-        console.log("Fetched profile:", profile);
         setTeacherName(`${profile.firstname} ${profile.lastname}`);
       } catch (err) {
         console.error("Failed to fetch teacher data:", err);

@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS materials (
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'error')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(project_id) REFERENCES projects(id)
+  FOREIGN KEY(classroom_id) REFERENCES classrooms(id)
 );
 
 CREATE TABLE IF NOT EXISTS generated_questions (
@@ -100,6 +101,33 @@ CREATE TABLE IF NOT EXISTS user_roles (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (role_id) REFERENCES roles(id)
 );
+
+--Creating classroom TABLE
+CREATE TABLE IF NOT EXISTS classrooms (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+--Junction table to associate classrooms with teachers
+CREATE TABLE IF NOT EXISTS classroom_teachers (
+    classroom_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    PRIMARY KEY (classroom_id, user_id),
+    FOREIGN KEY (classroom_id) REFERENCES classrooms(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+--Junction table to associate classrooms with students
+CREATE TABLE IF NOT EXISTS classroom_students (
+    classroom_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    PRIMARY KEY (classroom_id, user_id),
+    FOREIGN KEY (classroom_id) REFERENCES classrooms(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_materials_project ON materials(project_id);

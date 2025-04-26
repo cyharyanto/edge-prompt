@@ -45,7 +45,7 @@ export const SigninPage: React.FC = () => {
       if (response && response.token) {
         //  Assuming the backend sends a 'token' property
         localStorage.setItem("authToken", response.token); //  Securely store the token
-        navigate("/"); // Navigate to the home page
+        const role = response.role;
       } else {
         setError("Login failed. Please try again."); //  Generic error
       }

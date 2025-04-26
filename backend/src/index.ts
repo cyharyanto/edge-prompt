@@ -15,8 +15,10 @@ import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authMiddleware, jwtSecret} from './middleware/authMiddleware.js';
+import { authMiddleware } from './middleware/authMiddleware.js';
 import escape from 'escape-html';
+import crypto from 'crypto';
+
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,6 +53,21 @@ const storageMulter = multer.diskStorage({
 });
 
 const upload = multer({ storage: storageMulter });
+
+// Generate JWT secret key
+const generateJwtSecret = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+// Use environment variable, or generate a new one if not set
+const jwtSecret = process.env.JWT_SECRET || generateJwtSecret();
+process.env.JWT_SECRET = jwtSecret; //  IMPORTANT:  Set it back into the environment
+
+//check if JWT_SECRET exists
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is not set!');
+  process.exit(1);
+}
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
@@ -166,6 +183,80 @@ app.delete('/api/account', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+const classroomRouter = express.Router();
+
+// Classroom routes
+classroomRouter.post('/', authMiddleware, async (req, res) => {
+  try {
+      const { name, description } = req.body;
+      const classroomId = await db.createClassroom(name, description);
+      const classroom = await db.getClassroom(classroomId);
+      res.status(201).json(classroom);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to create classroom', details: error.message });
+  }
+});
+
+classroomRouter.get('/:id', authMiddleware, async (req, res) => {
+  try {
+      const classroom = await db.getClassroom(req.params.id);
+      if (classroom) {
+          res.json(classroom);
+      } else {
+          res.status(404).json({ error: 'Classroom not found' });
+      }
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get classroom', details: error.message });
+  }
+});
+
+classroomRouter.get('/users/:userId', authMiddleware, async (req, res) => {
+  try {
+      const classrooms = await db.getClassroomsForTeacher(req.params.userId);
+      res.json(classrooms);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get classrooms for teacher', details: error.message });
+  }
+});
+
+classroomRouter.post('/:classroom_id/teachers/:user_id', authMiddleware, async (req, res) => {
+  try {
+      await db.addTeacherToClassroom(req.params.classroom_id, req.params.user_id);
+      res.status(200).json({ message: 'Teacher added to classroom' });
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to add teacher to classroom', details: error.message });
+  }
+});
+
+classroomRouter.post('/:classroom_id/students/:user_id', authMiddleware, async (req, res) => {
+  try {
+      await db.addStudentToClassroom(req.params.classroom_id, req.params.user_id);
+      res.status(200).json({ message: 'Student added to classroom' });
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to add student to classroom', details: error.message });
+  }
+});
+
+classroomRouter.get('/:classroom_id/students', authMiddleware, async (req, res) => {
+  try {
+      const students = await db.getStudentsInClassroom(req.params.classroom_id);
+      res.json(students);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get students in classroom', details: error.message });
+  }
+});
+
+classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res) => {
+  try {
+      const materials = await db.getMaterialsForClassroom(req.params.classroom_id);
+      res.json(materials);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get materials for classroom', details: error.message });
+  }
+});
+
+app.use('/api/classrooms', classroomRouter); // Mount the classroom router
 
 app.get('/api/health', async (_req, res): Promise<void> => {
   try {

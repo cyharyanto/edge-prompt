@@ -61,11 +61,35 @@ async function migrate() {
       INSERT INTO permissions (id, name, description)
       SELECT 'perm_view_project', 'view_project', 'Allows viewing project details'
       WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'view_project');
+
+       -- Classroom permissions
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_create_classroom', 'create_classroom', 'Allows creating new classrooms'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'create_classroom');
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_view_classroom', 'view_classroom', 'Allows viewing classroom details'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'view_classroom');
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_view_classrooms_for_teacher', 'view_classrooms_for_teacher', 'Allows viewing classrooms for a specific teacher'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'view_classrooms_for_teacher');
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_add_teacher_to_classroom', 'add_teacher_to_classroom', 'Allows adding a teacher to a classroom'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'add_teacher_to_classroom');
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_add_student_to_classroom', 'add_student_to_classroom', 'Allows adding a student to a classroom'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'add_student_to_classroom');
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_view_classroom_students', 'view_classroom_students', 'Allows viewing students in a classroom'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'view_classroom_students');
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_view_classroom_materials', 'view_classroom_materials', 'Allows viewing materials for a classroom'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'view_classroom_materials');
   `);
   console.log('Permissions initialized');
 
   // Initialize role_permissions (Role Assignments)
   await db.exec(`
+    -- Admin permissions
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT 'role_admin', 'perm_create_project'
     WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_create_project');
@@ -87,6 +111,30 @@ async function migrate() {
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT 'role_admin', 'perm_view_project'
     WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_view_project');
+    -- Classroom permissions for admin
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_admin', 'perm_create_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_create_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_admin', 'perm_view_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_view_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_admin', 'perm_view_classrooms_for_teacher'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_view_classrooms_for_teacher');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_admin', 'perm_add_teacher_to_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_add_teacher_to_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_admin', 'perm_add_student_to_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_add_student_to_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_admin', 'perm_view_classroom_students'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_view_classroom_students');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_admin', 'perm_view_classroom_materials'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_admin' AND permission_id = 'perm_view_classroom_materials');
+
+    -- Teacher permissions
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT 'role_teacher', 'perm_create_project'
     WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_create_project');
@@ -105,7 +153,29 @@ async function migrate() {
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT 'role_teacher', 'perm_view_project'
     WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_view_project');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_teacher', 'perm_create_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_create_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_teacher', 'perm_view_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_view_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_teacher', 'perm_view_classrooms_for_teacher'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_view_classrooms_for_teacher');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_teacher', 'perm_add_teacher_to_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_add_teacher_to_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_teacher', 'perm_add_student_to_classroom'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_add_student_to_classroom');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_teacher', 'perm_view_classroom_students'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_view_classroom_students');
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT 'role_teacher', 'perm_view_classroom_materials'
+    WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_teacher' AND permission_id = 'perm_view_classroom_materials');
     
+    -- Classroom permissions for students
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT 'role_student', 'perm_view_user_data'
     WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = 'role_student' AND permission_id = 'perm_view_user_data');

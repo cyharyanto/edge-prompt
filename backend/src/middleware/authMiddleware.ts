@@ -1,11 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import { DatabaseService } from '../services/DatabaseService.js';
-
-dotenv.config();
-
-export const jwtSecret = 'your-secret-key'; // Replace with your actual secret key
 
 declare module 'express-serve-static-core' {
     interface Request {
@@ -23,6 +18,14 @@ const routePermissions: Record<string, string> = {
     '/api/generate': 'generate_question', // Example: POST /api/generate
     '/api/validate': 'validate_response', // Example: POST /api/validate
     '/api/files/:projectId/:materialId/:filename': 'download_file', // Example: GET /api/files/...
+    // Classroom permissions
+    '/api/classrooms': 'create_classroom',
+    '/api/classrooms/:id': 'view_classroom',
+    '/api/classrooms/users/:userId': 'view_classrooms_for_teacher',
+    '/api/classrooms/:classroom_id/teachers/:user_id': 'add_teacher_to_classroom',
+    '/api/classrooms/:classroom_id/students/:user_id': 'add_student_to_classroom',
+    '/api/classrooms/:classroom_id/students': 'view_classroom_students',
+    '/api/classrooms/:classroom_id/materials': 'view_classroom_materials'
 };
 
    // Function to extract the base path (without parameters)

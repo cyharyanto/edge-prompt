@@ -1,12 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { DatabaseService } from '../services/DatabaseService.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
 
 declare module 'express-serve-static-core' {
     interface Request {
-      user?: any; // Or a more specific type if you have one
+      user?: {
+        userId: string;
+        email: string;
+        role: string;
+      };
     }
-}
+  }
 
 // Define your route to permission mapping
 const routePermissions: Record<string, string> = {
@@ -29,55 +38,50 @@ const routePermissions: Record<string, string> = {
 };
 
    // Function to extract the base path (without parameters)
-function getBasePath(path: string): string {
+   function getBasePath(path: string): string {
     const parts = path.split('/');
     if (parts.length > 2 && parts[2].includes(':')) {
-        return `/${parts[1]}/${parts[2].split('/')[0]}`;
+      return `/${parts[1]}/${parts[2].split('/')[0]}`;
     }
     return `/${parts[1]}`;
-}
-
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  }
+  
+  export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
-
+  
     if (!authHeader) {
-        return res.status(401).json({ message: 'No token provided' });  
+      return res.status(401).json({ message: 'No token provided' });
     }
-
-    const token = authHeader.split(' ')[1]; // Extract token from "Bearer <token>"
-
+  
+    const token = authHeader.split(' ')[1];
+  
     try {
-        const decoded = jwt.verify(token, jwtSecret);
-        req.user = {
-            userId: (decoded as any).userId,
-            email: (decoded as any).email,
-            role: (decoded as any).role
-        };
-
-        // Determine the required permission
-        const basePath = getBasePath(req.path);
-        const fullPath = req.path;
-        let requiredPermission = routePermissions[fullPath] || routePermissions[basePath];
-
-        if (requiredPermission) {
-            const db = new DatabaseService();
-            db.getUserPermissions((decoded as any).userId)
-                .then(userPermissions => {
-                    if (userPermissions.includes(requiredPermission)) {
-                        next(); // Permission granted
-                    } else {
-                        return res.status(403).json({ message: 'Unauthorized' }); 
-                    }
-                })
-                .catch(err => {
-                    console.error("Database error checking permissions:", err);
-                    return res.status(500).json({ message: 'Internal server error' }); 
-                });
-        } else {
-            next(); // No specific permission required
-        }
-
-    } catch (error) {
-        return res.status(401).json({ message: 'Invalid token' });  
+      const decoded = jwt.verify(token, jwtSecret) as any;
+  
+      req.user = {
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role
+      };
+  
+      const fullPath = req.path;
+      const basePath = getBasePath(fullPath);
+      const requiredPermission = routePermissions[fullPath] || routePermissions[basePath];
+  
+      if (!requiredPermission) {
+        return next(); // No permission restriction for this route
+      }
+  
+      const db = new DatabaseService();
+      const userPermissions = await db.getUserPermissions(decoded.userId);
+  
+      if (userPermissions.includes(requiredPermission)) {
+        return next(); // Permission granted
+      } else {
+        return res.status(403).json({ message: 'Unauthorized: insufficient permissions' });
+      }
+    } catch (err) {
+      console.error('JWT verification error:', err);
+      return res.status(401).json({ message: 'Invalid token' });
     }
-}
+  }

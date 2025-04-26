@@ -54,20 +54,6 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
-// Generate JWT secret key
-const generateJwtSecret = () => {
-  return crypto.randomBytes(32).toString('hex');
-};
-
-// Use environment variable, or generate a new one if not set
-const jwtSecret = process.env.JWT_SECRET || generateJwtSecret();
-process.env.JWT_SECRET = jwtSecret; //  IMPORTANT:  Set it back into the environment
-
-//check if JWT_SECRET exists
-if (!process.env.JWT_SECRET) {
-  console.error('JWT_SECRET is not set!');
-  process.exit(1);
-}
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
@@ -148,7 +134,7 @@ app.post('/api/signin', async (req, res) => {
     // 5. Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: userRole }, // Use role in payload
-      jwtSecret,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '1h' }
     );
     console.log("JWT generated:", token);

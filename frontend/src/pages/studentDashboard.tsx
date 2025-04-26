@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "src/services/api";
 
 type Class = {
   id: string;
@@ -21,11 +22,13 @@ const StudentDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        setStudentName("John");
+        const profile = await api.getProfile();
+        setStudentName(`${profile.firstname} ${profile.lastname}`);
       } catch (err) {
         console.error("Failed to fetch student data:", err);
       }
     };
+    
 
     const fetchClasses = async () => {
       try {
@@ -51,8 +54,8 @@ const StudentDashboard: React.FC = () => {
             <i className="bi bi-braces"></i> EdgePrompt
           </h1>
           <nav className="ms-auto d-flex align-items-center gap-3">
-            <button className="btn btn-light btn-sm">Home</button>
-            <button className="btn btn-light btn-sm">Profile</button>
+            <button className="btn btn-light btn-sm" onClick={() => navigate("/")}>Home</button>
+            <button className="btn btn-light btn-sm" onClick={() => navigate("/profile")}>Profile</button>
             <button
               className="btn btn-outline-light btn-sm"
               onClick={handleLogout}

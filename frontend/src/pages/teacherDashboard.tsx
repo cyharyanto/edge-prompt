@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "src/services/api";
 
 // Define class type
 type Class = {
@@ -19,12 +20,11 @@ const TeacherDashboard: React.FC = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const navigate = useNavigate();
 
-  // Simulate data fetch on mount
   useEffect(() => {
     const fetchTeacherData = async () => {
       try {
-        // Simulate fetching teacher profile
-        setTeacherName("Mr. John");
+        const profile = await api.getProfile();
+        setTeacherName(`${profile.firstname} ${profile.lastname}`);
       } catch (err) {
         console.error("Failed to fetch teacher data:", err);
       }

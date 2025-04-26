@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
 CREATE TABLE IF NOT EXISTS materials (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,
+  classroom_id TEXT,
   title TEXT,
   content TEXT NOT NULL,
   focus_area TEXT NOT NULL,

@@ -54,20 +54,6 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
-// Generate JWT secret key
-const generateJwtSecret = () => {
-  return crypto.randomBytes(32).toString('hex');
-};
-
-// Use environment variable, or generate a new one if not set
-const jwtSecret = process.env.JWT_SECRET || generateJwtSecret();
-process.env.JWT_SECRET = jwtSecret; //  IMPORTANT:  Set it back into the environment
-
-//check if JWT_SECRET exists
-if (!process.env.JWT_SECRET) {
-  console.error('JWT_SECRET is not set!');
-  process.exit(1);
-}
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
@@ -148,7 +134,7 @@ app.post('/api/signin', async (req, res) => {
     // 5. Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: userRole }, // Use role in payload
-      jwtSecret,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '1h' }
     );
     console.log("JWT generated:", token);
@@ -181,6 +167,31 @@ app.delete('/api/account', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error deleting account:', err);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Profile Endpoint - return logged-in user's info
+app.get('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = await db.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.json({
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      dob: user.dob,
+    });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 

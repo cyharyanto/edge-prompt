@@ -1,28 +1,41 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const dummyStudents = [
-  { id: "1", name: "John Doe" },
-  { id: "2", name: "Alice Smith" },
-  { id: "3", name: "Mark Rob" },
-  { id: "4", name: "Simon Tell" },
-  { id: "5", name: "John Matthew" },
-  { id: "6", name: "Francis Co" },
-  { id: "7", name: "Isaac Smith" },
-  { id: "8", name: "Matt Smith" },
-  { id: "9", name: "John Matt" },
-];
-
 const CreateClass: React.FC = () => {
   const [className, setClassName] = useState("");
   const [description, setDescription] = useState("");
-  const [students, setStudents] = useState(dummyStudents);
+  const [students, setStudents] = useState<{ id: string; name: string }[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [search, setSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ className?: string; selectedStudents?: string }>({});
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:3001/api/students", {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch students");
+        }
+        const data = await response.json();
+        setStudents(data.students.map((student: any) => ({
+          id: student.id,
+          name: student.name,
+        })));
+      } catch (error) {
+        console.error("Error fetching students:", error);
+      }
+    };
+  
+    fetchStudents();
+  }, []);  
 
   const handleCheckboxChange = (studentId: string) => {
     setSelectedStudents((prev) =>
@@ -56,12 +69,24 @@ const CreateClass: React.FC = () => {
     setStatus("idle");
 
     try {
-      await new Promise((res) => setTimeout(res, 1000)); 
-      setStatus("success");
-      setClassName("");
-      setDescription("");
-      setSelectedStudents([]);
-      setErrors({});
+      const token = localStorage.getItem("token"); // Get token again
+      const response = await fetch("http://localhost:3001/api/classrooms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: className,
+          description: description,
+          students: selectedStudents,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create class");
+      }
+      navigate("/dashboard/teacher", { state: { successMessage: "Class created successfully!" } });
     } catch (error) {
       console.error(error);
       setStatus("error");

@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "migrate": "tsx src/db/migrate.ts",
-    "test": "NODE_ENV=test mocha --require tsx/cjs 'src/**/*.test.ts' --file src/test/setup.ts",
+    "test": "cross-env NODE_ENV=test mocha --require tsx/cjs \"src/**/*.test.ts\" --file src/test/setup.ts",
+    "test:file-validation": "cross-env NODE_ENV=test mocha --require tsx/cjs src/utils/fileValidation.test.ts",
     "test:watch": "mocha --watch",
     "test:storage": "mocha src/services/StorageService.test.ts",
     "test:auth": "mocha src/middleware/authMiddleware.test.ts",
@@ -42,6 +43,7 @@
     "@types/pdfjs-dist": "^2.10.378",
     "@types/uuid": "^9.0.8",
     "chai": "^4.3.7",
+    "cross-env": "^7.0.3",
     "mocha": "^10.2.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"

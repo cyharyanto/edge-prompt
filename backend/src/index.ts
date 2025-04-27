@@ -50,7 +50,19 @@ const storageMulter = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storageMulter });
+const upload = multer({
+  storage: storageMulter,
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).slice(1).toLowerCase();
+    const allowed = ['txt', 'pdf', 'doc', 'docx', 'md'];
+
+    if (allowed.includes(ext)) {
+      cb(null, true);                         
+    } else {
+      cb(new Error('Unsupported file type')); 
+    }
+  }
+});
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {

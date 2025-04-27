@@ -30,13 +30,30 @@ const StudentDashboard: React.FC = () => {
     };
     
 
-    const fetchClasses = async () => {
+     const fetchClasses = async () => {
       try {
-        setClasses(placeholderClasses);
+        const token = localStorage.getItem("token");
+        const userId = localStorage.getItem("userId"); 
+    
+        const response = await fetch(`http://localhost:3001/api/classrooms/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+    
+        if (!response.ok) {
+          throw new Error("Failed to fetch classes");
+        }
+    
+        const data = await response.json();
+        setClasses(data.map((cls: any) => ({
+          id: cls.id,
+          name: cls.name,
+        })));
       } catch (err) {
-        console.error("Failed to fetch classes:", err);
+        console.error("Failed to fetch teacher classes:", err);
       }
-    };
+    };    
 
     fetchStudentData();
     fetchClasses();

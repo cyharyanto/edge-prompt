@@ -84,6 +84,9 @@ async function migrate() {
       INSERT INTO permissions (id, name, description)
       SELECT 'perm_view_classroom_materials', 'view_classroom_materials', 'Allows viewing materials for a classroom'
       WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'view_classroom_materials');
+      INSERT INTO permissions (id, name, description)
+      SELECT 'perm_view_classrooms_for_student', 'view_classrooms_for_student', 'Allows students to view their own classes'
+      WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'view_classrooms_for_student');
   `);
   console.log('Permissions initialized');
 

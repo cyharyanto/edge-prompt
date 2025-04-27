@@ -261,6 +261,17 @@ classroomRouter.get('/users/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+classroomRouter.get('/users/:user_id/classes', authMiddleware, async (req, res) => {
+  try {
+    const db = new DatabaseService();
+    const classes = await db.getStudentClasses(req.params.user_id);
+    res.json(classes);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get classes for student', details: error.message });
+  }
+});
+
+
 classroomRouter.post('/:classroom_id/teachers/:user_id', authMiddleware, async (req, res) => {
   try {
       await db.addTeacherToClassroom(req.params.classroom_id, req.params.user_id);

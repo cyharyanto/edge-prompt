@@ -34,6 +34,9 @@ const StudentDashboard: React.FC = () => {
       try {
         const token = localStorage.getItem("token");
         const userId = localStorage.getItem("userId"); 
+
+        console.log("user id: "+ userId)
+        console.log("token: " + token)
     
         const response = await fetch(`http://localhost:3001/api/classrooms/users/${userId}`, {
           headers: {
@@ -46,6 +49,8 @@ const StudentDashboard: React.FC = () => {
         }
     
         const data = await response.json();
+        console.log(data)
+        
         setClasses(data.map((cls: any) => ({
           id: cls.id,
           name: cls.name,

@@ -685,6 +685,18 @@ export class DatabaseService {
     return result.map(row => row.name);
   }
 
+  //Function to get users by roles
+  async getUsersByRole(roleName: string): Promise<{ id: string; firstname: string; lastname: string; email: string }[]> {
+    const stmt = this.prepareStatement(`
+      SELECT u.id, u.firstname, u.lastname, u.email
+      FROM users u
+      JOIN user_roles ur ON u.id = ur.user_id
+      JOIN roles r ON ur.role_id = r.id
+      WHERE LOWER(r.name) = LOWER(?)
+    `);
+    return stmt.all(roleName);
+  }
+
   //Function to achieve user permissions
   async getUserPermissions(userId: string): Promise<string[]> {
       const stmt = this.prepareStatement(`

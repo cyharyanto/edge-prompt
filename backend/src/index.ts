@@ -108,18 +108,15 @@ app.post('/api/signup', async (req, res) => {
 // signin Endpoint - connected to DatabaseService.ts
 app.post('/api/signin', async (req, res) => {
   const { email, password } = req.body;
-  console.log("Received signin request:", req.body);
 
   try {
     // 1. Input Validation (Basic)
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
-    console.log("Parsed signin data:", { email, password });
 
     // 2. Get the user by email
     const user = await db.getUserByEmail(email);
-    console.log("User found:", user);
 
     // 3. Check if user exists and password is correct
     if (!user || !await bcrypt.compare(password, user.passwordhash)) {
@@ -128,19 +125,22 @@ app.post('/api/signin', async (req, res) => {
 
     // 4. Get user roles
     const roles = await db.getUserRoles(user.id);
-    console.log("User roles found:", roles);
     const userRole = roles[0];
 
     // 5. Generate JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: userRole }, // Use role in payload
+      { userId: user.id, email: user.email, role: userRole },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '1h' }
     );
-    console.log("JWT generated:", token);
 
     // 6. Respond with token
-    res.json({ message: 'Signin successful', token, role: userRole });
+    res.json({ 
+      message: 'Signin successful', 
+      token, 
+      role: userRole,
+      userId: user.id  
+    });
 
   } catch (err) {
     res.status(500).json({ error: 'Login failed', details: err.message });
@@ -195,19 +195,49 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
   }
 });
 
+// Get all students
+app.get('/api/students', authMiddleware, async (_req, res) => {
+  try {
+    const students = await db.getUsersByRole('Student'); // fetch users with role "Student"
+    const studentList = students.map(student => ({
+      id: student.id,
+      name: `${student.firstname} ${student.lastname}`,
+      email: student.email
+    }));
+    res.json({ students: studentList });
+  } catch (error) {
+    console.error('Failed to get students:', error);
+    res.status(500).json({ error: 'Failed to get students' });
+  }
+});
+
 const classroomRouter = express.Router();
 
 // Classroom routes
 classroomRouter.post('/', authMiddleware, async (req, res) => {
   try {
-      const { name, description } = req.body;
-      const classroomId = await db.createClassroom(name, description);
-      const classroom = await db.getClassroom(classroomId);
-      res.status(201).json(classroom);
+    const { name, description, students } = req.body;
+    const teacherId = req.user?.userId;  // from JWT
+    const classroomId = await db.createClassroom(name, description);
+    
+    if (teacherId) {
+      await db.addTeacherToClassroom(classroomId, teacherId);
+    }
+
+    if (students && Array.isArray(students)) {
+      for (const studentId of students) {
+        await db.addStudentToClassroom(classroomId, studentId);
+      }
+    }
+
+    const classroom = await db.getClassroom(classroomId);
+    res.status(201).json(classroom);
   } catch (error) {
-      res.status(500).json({ error: 'Failed to create classroom', details: error.message });
+    console.error('Error creating classroom:', error);
+    res.status(500).json({ error: 'Failed to create classroom', details: error.message });
   }
 });
+
 
 classroomRouter.get('/:id', authMiddleware, async (req, res) => {
   try {

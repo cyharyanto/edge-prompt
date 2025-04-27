@@ -782,6 +782,8 @@ export class DatabaseService {
   }
 
   async getStudentClasses(userId: string): Promise<any[]> {
+
+    console.log("called get student classes")
     const stmt = this.prepareStatement(`
       SELECT c.id, c.name
       FROM classrooms c

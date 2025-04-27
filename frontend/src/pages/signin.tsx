@@ -44,7 +44,8 @@ export const SigninPage: React.FC = () => {
       // Navigate to the home page on successful login
       if (response && response.token && response.role) {
         //  Assuming the backend sends a 'token' property
-        localStorage.setItem("authToken", response.token); //  Securely store the token
+        localStorage.setItem("token", response.token); //  Securely store the token
+        localStorage.setItem("userId", response.userId);
         //Page navigation based on user role
         const role = response.role;
         if (role === "teacher") {

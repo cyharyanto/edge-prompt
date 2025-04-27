@@ -32,7 +32,7 @@ export interface UpdateProfileData {
 
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = localStorage.getItem('authToken'); //  Get the token from local storage
+    const token = localStorage.getItem('token'); //  Get the token from local storage
 
     const requestOptions: RequestInit = {
       method: options.method || 'GET',
@@ -64,7 +64,7 @@ class ApiClient {
 
   // Signin and authentication endpoints - connected to backend index.ts
   async signin(data: SigninData) {
-    return this.request<{ message: String, token: string, role: string }>('/signin', {
+    return this.request<{ message: String, token: string, role: string, userId: string }>('/signin', {
       method: 'POST',
       body: JSON.stringify(data),
     });

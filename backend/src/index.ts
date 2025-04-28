@@ -18,8 +18,7 @@ import jwt from 'jsonwebtoken';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import escape from 'escape-html';
 import crypto from 'crypto';
-
-
+import { validateUploadedFile } from './utils/fileValidation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,7 +51,19 @@ const storageMulter = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storageMulter });
+const upload = multer({
+  storage: storageMulter,
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).slice(1).toLowerCase();
+    const allowed = ['txt', 'pdf', 'doc', 'docx', 'md'];
+
+    if (allowed.includes(ext)) {
+      cb(null, true);                         
+    } else {
+      cb(new Error('Unsupported file type')); 
+    }
+  }
+});
 
 
 // Signup Endpoint - connected to DatabaseService.ts
@@ -535,14 +546,17 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
       return;
     }
 
-    // Get file extension without the dot
-    const fileType = path.extname(req.file.originalname).toLowerCase().substring(1);
-    
-    if (!['txt', 'pdf', 'doc', 'docx', 'md'].includes(fileType)) {
-      res.status(400).json({ 
-        error: 'Unsupported file type', 
-        details: `File type ${fileType} is not supported. Supported types: txt, pdf, doc, docx, md` 
-      });
+    /* ---------- Secure file-type validation (SCRUM-57) ---------- */
+    try {
+      // NOTE: this **reads magic bytes**, then enforces our whitelist.
+      await validateUploadedFile(
+        req.file.path,
+        req.file.originalname,
+        (req as any).user?.id ?? null   // user injected by authMiddleware
+      );
+    } catch (err: any) {
+      console.warn(`[VALIDATION-FAIL] ${(req as any).user?.id ?? 'anon'} :: ${req.file.originalname} :: ${err.message}`);  // FR-5
+      res.status(400).json({ error: err.message });
       return;
     }
 

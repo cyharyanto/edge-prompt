@@ -780,6 +780,18 @@ export class DatabaseService {
       `);
       return stmt.all(classroomId);
   }
+
+  async getStudentClasses(userId: string): Promise<any[]> {
+
+    const stmt = this.prepareStatement(`
+      SELECT c.id, c.name
+      FROM classrooms c
+      JOIN classroom_students cs ON c.id = cs.classroom_id
+      WHERE cs.user_id = ?
+    `);
+    return stmt.all(userId);
+  }
+  
   
   close() {
     this.db.close();

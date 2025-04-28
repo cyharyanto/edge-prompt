@@ -7,13 +7,6 @@ type Class = {
   name: string;
 };
 
-const placeholderClasses: Class[] = [
-  { id: "1", name: "English" },
-  { id: "2", name: "Science" },
-  { id: "3", name: "Mathematics" },
-  { id: "4", name: "History" }
-];
-
 const StudentDashboard: React.FC = () => {
   const [studentName, setStudentName] = useState("Student");
   const [classes, setClasses] = useState<Class[]>([]);
@@ -28,13 +21,34 @@ const StudentDashboard: React.FC = () => {
         console.error("Failed to fetch student data:", err);
       }
     };
-    
 
     const fetchClasses = async () => {
       try {
-        setClasses(placeholderClasses);
+        const token = localStorage.getItem("token");
+        const userId = localStorage.getItem("userId");
+
+        const response = await fetch(
+          `http://localhost:3001/api/classrooms/users/${userId}/classes`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch classes");
+        }
+
+        const data = await response.json();
+        setClasses(
+          data.map((cls: any) => ({
+            id: cls.id,
+            name: cls.name,
+          }))
+        );
       } catch (err) {
-        console.error("Failed to fetch classes:", err);
+        console.error("Failed to fetch teacher classes:", err);
       }
     };
 
@@ -44,6 +58,10 @@ const StudentDashboard: React.FC = () => {
 
   const handleLogout = () => {
     navigate("/");
+  };
+
+  const handleViewClass = (classId: string) => {
+    navigate(`/class/${classId}`);
   };
 
   return (
@@ -60,7 +78,7 @@ const StudentDashboard: React.FC = () => {
               className="btn btn-outline-light btn-sm"
               onClick={handleLogout}
             >
-            <i className="bi bi-box-arrow-right me-1"></i> Logout
+              <i className="bi bi-box-arrow-right me-1"></i> Logout
             </button>
           </nav>
         </div>
@@ -76,7 +94,12 @@ const StudentDashboard: React.FC = () => {
                 <div className="card shadow-sm h-100">
                   <div className="card-body text-center">
                     <h5 className="card-title">{cls.name}</h5>
-                    <button className="btn btn-outline-primary btn-sm">View Class</button>
+                    <button
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={() => handleViewClass(cls.id)}
+                    >
+                      View Class
+                    </button>
                   </div>
                 </div>
               </div>

@@ -34,7 +34,9 @@ const routePermissions: Record<string, string> = {
     '/api/classrooms/:classroom_id/teachers/:user_id': 'add_teacher_to_classroom',
     '/api/classrooms/:classroom_id/students/:user_id': 'add_student_to_classroom',
     '/api/classrooms/:classroom_id/students': 'view_classroom_students',
-    '/api/classrooms/:classroom_id/materials': 'view_classroom_materials'
+    '/api/classrooms/:classroom_id/materials': 'view_classroom_materials',
+    '/api/classrooms/users/:userId/classes': 'view_classrooms_for_student',
+
 };
 
    // Function to extract the base path (without parameters)

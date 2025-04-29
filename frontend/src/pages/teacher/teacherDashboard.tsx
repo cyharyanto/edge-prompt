@@ -73,9 +73,6 @@ const TeacherDashboard: React.FC = () => {
     navigate("/dashboard/teacher/create-class");
   };
 
-  const handleManageClass = (classId: string) => {
-    navigate(`/dashboard/teacher/manage-class/${classId}`);
-  };
 
   return (
     <div className="container-fluid">
@@ -119,12 +116,7 @@ const TeacherDashboard: React.FC = () => {
                 <div className="card shadow-sm h-100">
                   <div className="card-body text-center">
                     <h5 className="card-title">{cls.name}</h5>
-                    <button
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => handleManageClass(cls.id)}
-                    >
-                      Manage
-                    </button>
+                    <button className="btn btn-outline-primary btn-sm">Manage</button>
                   </div>
                 </div>
               </div>

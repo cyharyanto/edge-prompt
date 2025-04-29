@@ -630,6 +630,22 @@ export class DatabaseService {
       throw error; // Propagate the error to the caller
     }
   }
+
+  //Function to get user's information when logged in
+  async getUserById(userId: string): Promise<User | null> {
+    try {
+      const stmt = this.prepareStatement(`
+        SELECT id, firstname, lastname, email, passwordhash, dob, created_at
+        FROM users
+        WHERE id = ?
+      `);
+      const user = stmt.get(userId) as User | undefined;
+      return user || null;
+    } catch (error) {
+      console.error('Error in getUserById:', error);
+      throw error;
+    }
+  }  
   async deleteUserById(userId: string): Promise<void> {
     await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
   }
@@ -669,6 +685,18 @@ export class DatabaseService {
     return result.map(row => row.name);
   }
 
+  //Function to get users by roles
+  async getUsersByRole(roleName: string): Promise<{ id: string; firstname: string; lastname: string; email: string }[]> {
+    const stmt = this.prepareStatement(`
+      SELECT u.id, u.firstname, u.lastname, u.email
+      FROM users u
+      JOIN user_roles ur ON u.id = ur.user_id
+      JOIN roles r ON ur.role_id = r.id
+      WHERE LOWER(r.name) = LOWER(?)
+    `);
+    return stmt.all(roleName);
+  }
+
   //Function to achieve user permissions
   async getUserPermissions(userId: string): Promise<string[]> {
       const stmt = this.prepareStatement(`
@@ -697,6 +725,74 @@ export class DatabaseService {
       return result.map((row: any) => row.name);
   }
 
+  // Classrom functions
+  async createClassroom(name: string, description?: string): Promise<string> {
+    const stmt = this.prepareStatement(`
+        INSERT INTO classrooms (id, name, description) VALUES (?, ?, ?)
+    `);
+    const id = uuid();
+    await stmt.run(id, name, description);
+    return id;
+  }
+
+  async getClassroom(id: string): Promise<any> {
+      const stmt = this.prepareStatement(`
+          SELECT * FROM classrooms WHERE id = ?
+      `);
+      return stmt.get(id);
+  }
+
+  async getClassroomsForTeacher(userId: string): Promise<any[]> {
+      const stmt = this.prepareStatement(`
+          SELECT c.* FROM classrooms c
+          JOIN classroom_teachers ct ON c.id = ct.classroom_id
+          WHERE ct.user_id = ?
+      `);
+      return stmt.all(userId);
+  }
+
+  async addTeacherToClassroom(classroomId: string, userId: string): Promise<void> {
+      const stmt = this.prepareStatement(`
+          INSERT INTO classroom_teachers (classroom_id, user_id) VALUES (?, ?)
+      `);
+      await stmt.run(classroomId, userId);
+  }
+
+  async addStudentToClassroom(classroomId: string, userId: string): Promise<void> {
+      const stmt = this.prepareStatement(`
+          INSERT INTO classroom_students (classroom_id, user_id) VALUES (?, ?)
+      `);
+      await stmt.run(classroomId, userId);
+  }
+
+  async getStudentsInClassroom(classroomId: string): Promise<any[]> {
+      const stmt = this.prepareStatement(`
+          SELECT u.* FROM users u
+          JOIN classroom_students cs ON u.id = cs.user_id
+          WHERE cs.classroom_id = ?
+      `);
+      return stmt.all(classroomId);
+  }
+
+  async getMaterialsForClassroom(classroomId: string): Promise<any[]> {
+      const stmt = this.prepareStatement(`
+          SELECT * FROM materials WHERE classroom_id = ?
+      `);
+      return stmt.all(classroomId);
+  }
+
+  async getStudentClasses(userId: string): Promise<any[]> {
+
+    const stmt = this.prepareStatement(`
+      SELECT c.id, c.name
+      FROM classrooms c
+      JOIN classroom_students cs ON c.id = cs.classroom_id
+      WHERE cs.user_id = ?
+    `);
+    return stmt.all(userId);
+  }
+  
+  
   close() {
     this.db.close();
   }

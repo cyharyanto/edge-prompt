@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@edge-prompt/common": "file:"
   }
-} 
+}

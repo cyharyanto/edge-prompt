@@ -15,9 +15,10 @@ import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authMiddleware, jwtSecret} from './middleware/authMiddleware.js';
+import { authMiddleware } from './middleware/authMiddleware.js';
 import escape from 'escape-html';
-
+import crypto from 'crypto';
+import { validateUploadedFile } from './utils/fileValidation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,7 +51,20 @@ const storageMulter = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storageMulter });
+const upload = multer({
+  storage: storageMulter,
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).slice(1).toLowerCase();
+    const allowed = ['txt', 'pdf', 'doc', 'docx', 'md'];
+
+    if (allowed.includes(ext)) {
+      cb(null, true);                         
+    } else {
+      cb(new Error('Unsupported file type')); 
+    }
+  }
+});
+
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
@@ -95,24 +109,8 @@ app.post('/api/signup', async (req, res) => {
       }
     await db.assignRoleToUser(id, role.id);
 
-    // 6. Generate a JWT
-    const token = jwt.sign(
-        { userId: id, email: email, role: roleName }, // Use roleName in payload
-        jwtSecret, // Replace with your secret key
-        { expiresIn: '1h' }
-    );
-    console.log("JWT generated:", token);
-    // // 7. Set the cookie in the response headers
-    // res.cookie('authToken', token, {
-    //   httpOnly: true,  //  Crucial for XSS protection
-    //   secure: process.env.NODE_ENV === 'production', //  Only send over HTTPS in production
-    //   sameSite: 'strict', //  Recommended for CSRF protection
-    //   maxAge: 60 * 60 * 1000, //  1 hour (in milliseconds) - match JWT expiration
-    //   path: '/', //  Cookie is valid for the entire domain
-    // });
-
-    // 8. Respond with success and the token
-    res.status(201).json({ message: 'User created successfully', token });
+    // 6. Respond with success
+    res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });
   }
@@ -121,18 +119,15 @@ app.post('/api/signup', async (req, res) => {
 // signin Endpoint - connected to DatabaseService.ts
 app.post('/api/signin', async (req, res) => {
   const { email, password } = req.body;
-  console.log("Received signin request:", req.body);
 
   try {
     // 1. Input Validation (Basic)
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
-    console.log("Parsed signin data:", { email, password });
 
     // 2. Get the user by email
     const user = await db.getUserByEmail(email);
-    console.log("User found:", user);
 
     // 3. Check if user exists and password is correct
     if (!user || !await bcrypt.compare(password, user.passwordhash)) {
@@ -141,28 +136,22 @@ app.post('/api/signin', async (req, res) => {
 
     // 4. Get user roles
     const roles = await db.getUserRoles(user.id);
-    console.log("User roles found:", roles);
     const userRole = roles[0];
 
     // 5. Generate JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: userRole }, // Use role in payload
-      jwtSecret,
+      { userId: user.id, email: user.email, role: userRole },
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '1h' }
     );
-    console.log("JWT generated:", token);
 
-    // // 6. Set the cookie in the response headers
-    // res.cookie('authToken', token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production',
-    //   sameSite: 'strict',
-    //   maxAge: 60 * 60 * 1000,
-    //   path: '/',
-    // });
-
-    // 7. Respond with token
-    res.json({ message: 'Signin successful', token });
+    // 6. Respond with token
+    res.json({ 
+      message: 'Signin successful', 
+      token, 
+      role: userRole,
+      userId: user.id  
+    });
 
   } catch (err) {
     res.status(500).json({ error: 'Login failed', details: err.message });
@@ -191,6 +180,146 @@ app.delete('/api/account', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+// Profile Endpoint - return logged-in user's info
+app.get('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = await db.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.json({
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      dob: user.dob,
+    });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Get all students
+app.get('/api/students', authMiddleware, async (_req, res) => {
+  try {
+    const students = await db.getUsersByRole('Student'); // fetch users with role "Student"
+    const studentList = students.map(student => ({
+      id: student.id,
+      name: `${student.firstname} ${student.lastname}`,
+      email: student.email
+    }));
+    res.json({ students: studentList });
+  } catch (error) {
+    console.error('Failed to get students:', error);
+    res.status(500).json({ error: 'Failed to get students' });
+  }
+});
+
+const classroomRouter = express.Router();
+
+// Classroom routes
+classroomRouter.post('/', authMiddleware, async (req, res) => {
+  try {
+    const { name, description, students } = req.body;
+    const teacherId = req.user?.userId;  // from JWT
+    const classroomId = await db.createClassroom(name, description);
+    
+    if (teacherId) {
+      await db.addTeacherToClassroom(classroomId, teacherId);
+    }
+
+    if (students && Array.isArray(students)) {
+      for (const studentId of students) {
+        await db.addStudentToClassroom(classroomId, studentId);
+      }
+    }
+
+    const classroom = await db.getClassroom(classroomId);
+    res.status(201).json(classroom);
+  } catch (error) {
+    console.error('Error creating classroom:', error);
+    res.status(500).json({ error: 'Failed to create classroom', details: error.message });
+  }
+});
+
+
+classroomRouter.get('/:id', authMiddleware, async (req, res) => {
+  try {
+      const classroom = await db.getClassroom(req.params.id);
+      if (classroom) {
+          res.json(classroom);
+      } else {
+          res.status(404).json({ error: 'Classroom not found' });
+      }
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get classroom', details: error.message });
+  }
+});
+
+classroomRouter.get('/users/:userId', authMiddleware, async (req, res) => {
+  try {
+      const classrooms = await db.getClassroomsForTeacher(req.params.userId);
+      res.json(classrooms);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get classrooms for teacher', details: error.message });
+  }
+});
+
+classroomRouter.get('/users/:user_id/classes', authMiddleware, async (req, res) => {
+  try {
+    const db = new DatabaseService();
+    const classes = await db.getStudentClasses(req.params.user_id);
+    res.json(classes);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get classes for student', details: error.message });
+  }
+});
+
+
+classroomRouter.post('/:classroom_id/teachers/:user_id', authMiddleware, async (req, res) => {
+  try {
+      await db.addTeacherToClassroom(req.params.classroom_id, req.params.user_id);
+      res.status(200).json({ message: 'Teacher added to classroom' });
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to add teacher to classroom', details: error.message });
+  }
+});
+
+classroomRouter.post('/:classroom_id/students/:user_id', authMiddleware, async (req, res) => {
+  try {
+      await db.addStudentToClassroom(req.params.classroom_id, req.params.user_id);
+      res.status(200).json({ message: 'Student added to classroom' });
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to add student to classroom', details: error.message });
+  }
+});
+
+classroomRouter.get('/:classroom_id/students', authMiddleware, async (req, res) => {
+  try {
+      const students = await db.getStudentsInClassroom(req.params.classroom_id);
+      res.json(students);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get students in classroom', details: error.message });
+  }
+});
+
+classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res) => {
+  try {
+      const materials = await db.getMaterialsForClassroom(req.params.classroom_id);
+      res.json(materials);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get materials for classroom', details: error.message });
+  }
+});
+
+app.use('/api/classrooms', classroomRouter); // Mount the classroom router
 
 app.get('/api/health', async (_req, res): Promise<void> => {
   try {
@@ -417,14 +546,17 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
       return;
     }
 
-    // Get file extension without the dot
-    const fileType = path.extname(req.file.originalname).toLowerCase().substring(1);
-    
-    if (!['txt', 'pdf', 'doc', 'docx', 'md'].includes(fileType)) {
-      res.status(400).json({ 
-        error: 'Unsupported file type', 
-        details: `File type ${fileType} is not supported. Supported types: txt, pdf, doc, docx, md` 
-      });
+    /* ---------- Secure file-type validation (SCRUM-57) ---------- */
+    try {
+      // NOTE: this **reads magic bytes**, then enforces our whitelist.
+      await validateUploadedFile(
+        req.file.path,
+        req.file.originalname,
+        (req as any).user?.id ?? null   // user injected by authMiddleware
+      );
+    } catch (err: any) {
+      console.warn(`[VALIDATION-FAIL] ${(req as any).user?.id ?? 'anon'} :: ${req.file.originalname} :: ${err.message}`);  // FR-5
+      res.status(400).json({ error: err.message });
       return;
     }
 

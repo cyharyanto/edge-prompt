@@ -14,8 +14,11 @@ import SignUpPage from "./pages/signup";
 import LoginPage from "./pages/signin";
 import Dashboard from "./pages/dashboard";
 import StudentDashboard from "./pages/studentDashboard";
-import TeacherDashboard from "./pages/teacherDashboard";
-import ManageClass from "./pages/manageClass";
+import TeacherDashboard from "./pages/teacher/teacherDashboard";
+import CreateClass from "./pages/teacher/createClass";
+import ManageClass from "./pages/teacher/manageClass";
+import ClassPage from "./pages/StudentClassPage";
+
 
 const App: React.FC = () => {
   return (

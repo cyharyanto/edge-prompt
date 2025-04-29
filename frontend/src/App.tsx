@@ -19,7 +19,6 @@ import CreateClass from "./pages/teacher/createClass";
 import ManageClass from "./pages/teacher/manageClass";
 import ClassPage from "./pages/StudentClassPage";
 
-
 const App: React.FC = () => {
   return (
     <ErrorBoundary>

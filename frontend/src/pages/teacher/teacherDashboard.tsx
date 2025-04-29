@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { api } from "src/services/api";
 
 // Define class type
 type Class = {
@@ -7,24 +8,19 @@ type Class = {
   name: string;
 };
 
-// Placeholder class list
-const placeholderClasses: Class[] = [
-  { id: "1", name: "English" },
-  { id: "2", name: "Mathematics" },
-  { id: "3", name: "Science" }
-];
-
 const TeacherDashboard: React.FC = () => {
   const [teacherName, setTeacherName] = useState("Teacher");
   const [classes, setClasses] = useState<Class[]>([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = location.state?.successMessage || "";
+  const [showSuccess, setShowSuccess] = useState(!!successMessage);
 
-  // Simulate data fetch on mount
   useEffect(() => {
     const fetchTeacherData = async () => {
       try {
-        // Simulate fetching teacher profile
-        setTeacherName("Mr. John");
+        const profile = await api.getProfile();
+        setTeacherName(`${profile.firstname} ${profile.lastname}`);
       } catch (err) {
         console.error("Failed to fetch teacher data:", err);
       }
@@ -32,16 +28,42 @@ const TeacherDashboard: React.FC = () => {
 
     const fetchTeacherClasses = async () => {
       try {
-        // Simulate fetching teacher's class list
-        setClasses(placeholderClasses);
+        const token = localStorage.getItem("token");
+        const userId = localStorage.getItem("userId"); 
+    
+        const response = await fetch(`http://localhost:3001/api/classrooms/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+    
+        if (!response.ok) {
+          throw new Error("Failed to fetch classes");
+        }
+    
+        const data = await response.json();
+        setClasses(data.map((cls: any) => ({
+          id: cls.id,
+          name: cls.name,
+        })));
       } catch (err) {
         console.error("Failed to fetch teacher classes:", err);
       }
-    };
+    };    
 
     fetchTeacherData();
     fetchTeacherClasses();
   }, []);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000); // 5 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const handleLogout = () => {
     navigate("/");
@@ -77,7 +99,12 @@ const TeacherDashboard: React.FC = () => {
       </header>
   
       <h2 className="mb-4">Welcome, {teacherName}!</h2>
-  
+      {showSuccess && (
+        <div className="alert alert-success" role="alert">
+          {successMessage}
+        </div>
+      )}
+
       <div className="row">
         <div className="col-md-9">
           <div className="d-flex justify-content-between align-items-center mb-3">
@@ -102,6 +129,11 @@ const TeacherDashboard: React.FC = () => {
                 </div>
               </div>
             ))}
+          {classes.length === 0 && (
+            <div className="col-12 text-center text-muted mt-3">
+              No classes yet. Create your first class!
+            </div>
+          )}
           </div>
         </div>
   

@@ -12,10 +12,12 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import HomePage from "./pages/homepage";
 import SignUpPage from "./pages/signup";
 import LoginPage from "./pages/signin";
+import ProfilePage from "./pages/profile";
 import Dashboard from "./pages/dashboard";
 import StudentDashboard from "./pages/studentDashboard";
 import TeacherDashboard from "./pages/teacher/teacherDashboard";
 import CreateClass from "./pages/teacher/createClass";
+import ManageClass from "./pages/teacher/manageClass";
 import ClassPage from "./pages/StudentClassPage";
 
 const App: React.FC = () => {
@@ -30,6 +32,7 @@ const App: React.FC = () => {
             {/* Authentication routes */}
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
 
             {/* Main dashboard */}
             <Route path="/dashboard" element={<Dashboard />} />
@@ -39,6 +42,7 @@ const App: React.FC = () => {
             {/* Teacher dashboard */}
             <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
             <Route path="/dashboard/teacher/create-class" element={<CreateClass />} />
+            <Route path="/dashboard/teacher/manage-class/:classId" element={<ManageClass />} />
 
             {/* Fallback route - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

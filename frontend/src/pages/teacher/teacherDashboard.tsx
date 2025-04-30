@@ -113,7 +113,12 @@ const TeacherDashboard: React.FC = () => {
           <div className="row g-3">
             {classes.map((cls) => (
               <div className="col-md-6 col-lg-4" key={cls.id}>
-                <div className="card shadow-sm h-100">
+                <div 
+                  className="card shadow-sm h-100"
+                  title="Click to view class"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/dashboard/teacher/class/${cls.id}`)}
+                >
                   <div className="card-body text-center">
                     <h5 className="card-title">{cls.name}</h5>
                     <button className="btn btn-outline-primary btn-sm">Manage</button>

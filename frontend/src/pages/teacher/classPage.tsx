@@ -1,8 +1,8 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { api } from '../services/api';  // Assuming you have an API service setup
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { api } from "../../services/api";
 
-export const TeacherClassPage = () => {
+const TeacherClassPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [classData, setClassData] = useState<any>(null);
@@ -11,10 +11,10 @@ export const TeacherClassPage = () => {
   useEffect(() => {
     const fetchClassData = async () => {
       try {
-        const data = await api.getClassById(id!); // You must implement this API if not yet done
+        const data = await api.getClassById(id!);
         setClassData(data);
       } catch (error) {
-        console.error('Failed to fetch class data', error);
+        console.error("Failed to fetch class data", error);
       } finally {
         setLoading(false);
       }
@@ -22,38 +22,78 @@ export const TeacherClassPage = () => {
     fetchClassData();
   }, [id]);
 
-  if (loading) return <div>Loading...</div>;
-
-  if (!classData) return <div>Class not found</div>;
+  if (loading) return <div className="text-center mt-5">Loading class...</div>;
+  if (!classData) return <div className="text-center mt-5 text-danger">Class not found</div>;
 
   return (
-    <div className="container mt-4">
-      <button className="btn btn-secondary mb-3" onClick={() => navigate('/dashboard/teacher')}>
-        ← Back to Dashboard
-      </button>
-
-      <h1>{classData.className}</h1>
-      <h4 className="text-muted">{classData.subjectName}</h4>
-
-      <div className="d-flex flex-wrap gap-3 mt-4">
-        {classData.learningMaterials.map((material: any) => (
-          <div 
-            key={material.id} 
-            className="card p-3"
-            style={{ width: '200px', cursor: 'pointer' }}
-            onClick={() => navigate(`/material/${material.id}`)} // Or your material detail page
+    <div className="container-fluid px-4 mt-4">
+      <div className="row mb-4">
+        <div className="col-md-8">
+          <h2 className="fw-bold">{classData.className}</h2>
+          <p className="text-muted mb-0">Manage your learning materials</p>
+        </div>
+        <div className="col-md-4 text-end">
+          <button
+            className="btn btn-outline-secondary btn-sm me-2"
+            onClick={() => navigate("/dashboard/teacher")}
           >
-            <h5>{material.title}</h5>
-          </div>
-        ))}
+            ← Back
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => navigate(`/dashboard/teacher/class/${id}/add-material`)}
+          >
+            <i className="bi bi-plus-lg me-1"></i> Add Material
+          </button>
+        </div>
       </div>
 
-      <button 
-        className="btn btn-primary mt-4"
-        onClick={() => navigate(`/dashboard/teacher/class/${id}/add-material`)}
-      >
-        + Add Learning Material
-      </button>
+      <div className="row">
+        <div className="col-md-9">
+          <div className="mb-3">
+            <h5>Learning Materials</h5>
+          </div>
+
+          {classData.learningMaterials.length === 0 ? (
+            <div className="text-muted">No learning materials added yet.</div>
+          ) : (
+            <div className="row g-3">
+              {classData.learningMaterials.map((material: any) => (
+                <div className="col-md-6 col-lg-4" key={material.id}>
+                  <div
+                    className="card shadow-sm h-100"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/material/${material.id}`)}
+                  >
+                    <div className="card-body text-center">
+                      <h5 className="card-title">{material.title}</h5>
+                      <p className="text-muted small mb-0">Click to view or manage</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="col-md-3">
+          <div className="card shadow-sm h-100">
+            <div className="card-header bg-light">
+              <h5 className="mb-0">
+                <i className="bi bi-tools me-1"></i> Class Tools
+              </h5>
+            </div>
+            <div className="card-body">
+              <p className="text-muted">
+                This space can be used for future tools like analytics,
+                announcements, or class-level actions.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
+
+export default TeacherClassPage;

@@ -89,6 +89,7 @@ class ApiClient {
       method: 'GET',
     });
   }
+
   // Profile credentials update endpoints - connected to backend index.ts
   async updateProfile(data: UpdateProfileData) {
     return this.request<{ message: string }>('/profile', {
@@ -96,6 +97,28 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Profile password update endpoints - connected to backend index.ts
+  async updatePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ message: string }>('/profile/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  // Validate a stored token (useful for app initialization)
+  async validateToken() {
+    return this.request<{ valid: boolean, user?: { userId: string, email: string, role: string } }>('/validate-token', {
+      method: 'GET',
+    });
+  }
+
+  // Helper method to attach auth headers to requests
+  getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }
+
   // Profile logout endpoints - connected to backend index.ts
   async signout() {
     return this.request<{ message: string }>('/signout', {

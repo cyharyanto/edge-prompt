@@ -163,7 +163,7 @@ app.post('/api/signout', authMiddleware, async (_req, res) => {
 });
 
 // Delete Account
-app.delete('/api/account', authMiddleware, async (req, res) => {
+app.delete('/api/delete-account', authMiddleware, async (req, res) => {
   const userId = req.user?.userId;  
 
   if (!userId) {
@@ -201,6 +201,71 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error fetching profile:', error);
     return res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Add an endpoint to update the profile
+app.put('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { firstname, lastname, email, dob } = req.body;
+    
+    // Basic validation
+    if (!firstname || !lastname || !email || !dob) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Update the user profile
+    await db.updateUserProfile(userId, { firstname, lastname, email, dob });
+    
+    return res.json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Add an endpoint to update the password
+app.put('/api/profile/password', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    
+    // Basic validation
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    // Get the user
+    const user = await db.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordhash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    // Hash the new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    
+    // Update the password
+    await db.updateUserPassword(userId, newPasswordHash);
+    
+    return res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    return res.status(500).json({ error: 'Failed to update password' });
   }
 });
 

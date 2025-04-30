@@ -12,6 +12,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import HomePage from "./pages/homepage";
 import SignUpPage from "./pages/signup";
 import LoginPage from "./pages/signin";
+import ProfilePage from "./pages/profile";
 import Dashboard from "./pages/dashboard";
 import StudentDashboard from "./pages/studentDashboard";
 import TeacherDashboard from "./pages/teacher/teacherDashboard";
@@ -31,6 +32,7 @@ const App: React.FC = () => {
             {/* Authentication routes */}
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
 
             {/* Main dashboard */}
             <Route path="/dashboard" element={<Dashboard />} />

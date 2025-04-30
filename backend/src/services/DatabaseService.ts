@@ -88,11 +88,10 @@ export class DatabaseService {
     }
   }
 
-  private async exec(sql: string, params: any[] = []): Promise<void> {
-    const stmt = this.db.prepare(sql);
-    stmt.run(...params);
+  exec(sql: string) {
+    return this.db.exec(sql);
   }
-
+  
   // Project methods
   getProjects(): Project[] {
     const stmt = this.db.prepare('SELECT * FROM projects ORDER BY created_at DESC');

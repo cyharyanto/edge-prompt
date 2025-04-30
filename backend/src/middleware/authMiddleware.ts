@@ -29,13 +29,17 @@ const routePermissions: Record<string, string> = {
     '/api/files/:projectId/:materialId/:filename': 'download_file', // Example: GET /api/files/...
     // Classroom permissions
     '/api/classrooms': 'create_classroom',
-    '/api/classrooms/:id': 'view_classroom',
+    // '/api/classrooms/:id': 'view_classroom',
     '/api/classrooms/users/:userId': 'view_classrooms_for_teacher',
     '/api/classrooms/:classroom_id/teachers/:user_id': 'add_teacher_to_classroom',
-    '/api/classrooms/:classroom_id/students/:user_id': 'add_student_to_classroom',
+    // '/api/classrooms/:classroom_id/students/:user_id': 'add_student_to_classroom',
     '/api/classrooms/:classroom_id/students': 'view_classroom_students',
     '/api/classrooms/:classroom_id/materials': 'view_classroom_materials',
     '/api/classrooms/users/:userId/classes': 'view_classrooms_for_student',
+    '/api/classrooms/:id': 'manage_classroom',
+    '/api/classrooms/:classroom_id/students/:user_id': 'manage_classroom_students',
+    '/api/classrooms/:classroom_id/students/available': 'manage_classroom_students',
+    '/api/classrooms/:id/students': 'view_classroom_students'
 
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../../services/api";
+import { api } from "src/services/api";
 
 interface Student {
   id: string;
@@ -15,23 +15,10 @@ interface ClassData {
   students: string[];
 }
 
-// Dummy student data for development
-const dummyStudents: Student[] = [
-  { id: "s1", name: "Alice Johnson", email: "alice.j@example.com" },
-  { id: "s2", name: "Bob Smith", email: "bob.smith@example.com" },
-  { id: "s3", name: "Carlos Rodriguez", email: "carlos.r@example.com" },
-  { id: "s4", name: "Diana Chen", email: "diana.c@example.com" },
-  { id: "s5", name: "Emmanuel Okonkwo", email: "emmanuel.o@example.com" },
-  { id: "s6", name: "Fatima Al-Zahra", email: "fatima.z@example.com" },
-  { id: "s7", name: "Gabriel Santos", email: "gabriel.s@example.com" },
-  { id: "s8", name: "Hannah Kim", email: "hannah.k@example.com" },
-  { id: "s9", name: "Ishan Patel", email: "ishan.p@example.com" },
-  { id: "s10", name: "Julia Martinez", email: "julia.m@example.com" },
-];
-
 const ManageClass: React.FC = () => {
   // Get classId from URL parameters
   const { classId } = useParams<{ classId: string }>();
+
   // const history = useHistory();
   const navigate = useNavigate();
 
@@ -63,69 +50,53 @@ const ManageClass: React.FC = () => {
       }
 
       try {
-        // In a real application, use the API to fetch class details
-        // const classDetails = await api.getClass(classId);
-
-        // For demo: mock data fetch with timeout
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // Mock class data
-        const mockClassData = {
+        setIsLoading(true);
+        // Fetch class details
+        const classDetails = await api.getClassDetails(classId);
+        setClassData({
           id: classId,
-          name: "Sample Class " + classId,
-          description: "This is a sample class for demonstration purposes.",
-          students: ["s1", "s3", "s5"],
-        };
+          name: classDetails.name,
+          description: classDetails.description || "",
+          students: classDetails.students || [],
+        });
 
-        setClassData(mockClassData);
-
-        // Filter enrolled students from dummy data based on the class's student IDs
-        const enrolled = dummyStudents.filter(student =>
-          mockClassData.students.includes(student.id)
-        );
+        // Fetch enrolled students
+        const enrolled = await api.getEnrolledStudents(classId);
         setEnrolledStudents(enrolled);
 
-        // Set available students (those not already enrolled)
-        const available = dummyStudents.filter(student =>
-          !mockClassData.students.includes(student.id)
-        );
+        // Fetch available students
+        const available = await api.getAvailableStudents(classId);
         setAvailableStudents(available);
-
       } catch (err: any) {
-        setError(`Failed to load class data: ${err.message}`);
+        setError(`Failed to load class data: ${err.message || "Unknown error"}`);
       } finally {
         setIsLoading(false);
       }
     };
-
+    
     fetchClassData();
-    // const fetchClassDetails = async () => {
-    //   try {
-    //     const classData = await new ApiClient().getClass(classId);
-    //     setClassDetails(classData);
-    //     const classStudents = await new ApiClient().getClassStudents(classId);
-    //     setStudents(classStudents);
-    //     setLoading(false);
-    //   } catch (err) {
-    //     setError('Failed to load class details');
-    //     setLoading(false);
-    //   }
-    // };
-
-    // fetchClassDetails();
   }, [classId]);
 
-  // const handleDeleteClass = async () => {
-  //   if (window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) {
-  //     try {
-  //       await new ApiClient().deleteClass(classId);
-  //       alert('Class deleted successfully!');
-  //       history.push('/classes');  // Redirect to the classes list page
-  //     } catch (err) {
-  //       alert('Error deleting class');
-  //     }
-  //   }
-  // };
+  const handleDeleteClass = async () => {
+    if (window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) {
+      try {
+        setIsSubmitting(true);
+        await api.deleteClass(classId!);
+        setSuccess("Class deleted successfully");
+        
+        // Navigate back to dashboard after a delay
+        setTimeout(() => {
+          navigate("/dashboard/teacher", { 
+            state: { successMessage: `Class "${classData.name}" was deleted successfully.` } 
+          });
+        }, 2000);
+      } catch (err: any) {
+        setError(`Failed to delete class: ${err.message || "Unknown error"}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -140,18 +111,13 @@ const ManageClass: React.FC = () => {
   const handleRemoveStudent = async (studentId: string) => {
     try {
       setIsSubmitting(true);
+      await api.removeStudentFromClass(classId!, studentId);
 
-      // In a real application:
-      // await api.removeStudentFromClass(classId!, studentId);
-
-      // For demo: simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Update local state to reflect the change
+      // Update local state
       setEnrolledStudents(prev => prev.filter(student => student.id !== studentId));
 
-      // Add the removed student to available students
-      const removedStudent = dummyStudents.find(s => s.id === studentId);
+      // Add removed student to available list
+      const removedStudent = enrolledStudents.find(s => s.id === studentId);
       if (removedStudent) {
         setAvailableStudents(prev => [...prev, removedStudent]);
       }
@@ -162,10 +128,9 @@ const ManageClass: React.FC = () => {
         students: prev.students.filter(id => id !== studentId)
       }));
 
-      setSuccess(`Student removed successfully`);
-
+      setSuccess("Student removed successfully");
     } catch (err: any) {
-      setError(`Failed to remove student: ${err.message}`);
+      setError(`Failed to remove student: ${err.message || "Unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -192,22 +157,18 @@ const ManageClass: React.FC = () => {
     try {
       setIsSubmitting(true);
 
-      // In a real application, use a batch operation or loop through selected students
-      // for (const studentId of selectedStudentsToAdd) {
-      //   await api.addStudentToClass(classId!, studentId);
-      // }
+      // Add students one by one
+      for (const studentId of selectedStudentsToAdd) {
+        await api.addStudentToClass(classId!, studentId);
+      }
 
-      // For demo: simulate API call
-      await new Promise(resolve => setTimeout(resolve, 700));
-
-      // Update enrolled students
-      const studentsToAdd = availableStudents.filter(student =>
+      // Update local state
+      const studentsToAdd = availableStudents.filter(student => 
         selectedStudentsToAdd.includes(student.id)
       );
-      setEnrolledStudents(prev => [...prev, ...studentsToAdd]);
 
-      // Remove added students from available list
-      setAvailableStudents(prev =>
+      setEnrolledStudents(prev => [...prev, ...studentsToAdd]);
+      setAvailableStudents(prev => 
         prev.filter(student => !selectedStudentsToAdd.includes(student.id))
       );
 
@@ -217,13 +178,10 @@ const ManageClass: React.FC = () => {
         students: [...prev.students, ...selectedStudentsToAdd]
       }));
 
-      // Clear selection
       setSelectedStudentsToAdd([]);
-
       setSuccess(`${studentsToAdd.length} student(s) added successfully`);
-
     } catch (err: any) {
-      setError(`Failed to add students: ${err.message}`);
+      setError(`Failed to add students: ${err.message || "Unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -248,22 +206,17 @@ const ManageClass: React.FC = () => {
     setError(null);
 
     try {
-      // For development, just log the data
-      console.log("Class updated:", classData);
-
-      // In a real application:
-      // await api.updateClass(classId!, classData);
-
-      // For demo: simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.updateClassDetails(classId!, {
+        name: classData.name,
+        description: classData.description,
+      });
 
       setSuccess(`Class "${classData.name}" updated successfully!`);
 
-      // Navigate back to dashboard after a short delay
+      // Navigate back to dashboard after a delay
       setTimeout(() => {
         navigate("/dashboard/teacher");
       }, 2000);
-
     } catch (err: any) {
       setError(err.message || "Failed to update class");
     } finally {
@@ -471,29 +424,36 @@ const ManageClass: React.FC = () => {
                 <div className="d-flex justify-content-between mt-4">
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => navigate("/dashboard/teacher")}
+                    className="btn btn-danger"
+                    onClick={handleDeleteClass}
                     disabled={isSubmitting}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </button>
-                  {/* <button onClick={handleDeleteClass} style={{ backgroundColor: 'red', color: 'white' }}>
                     Delete Class
-                  </button> */}
+                  </button>
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary me-2"
+                      onClick={() => navigate("/dashboard/teacher")}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

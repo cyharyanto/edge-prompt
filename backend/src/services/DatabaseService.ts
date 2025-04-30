@@ -91,7 +91,7 @@ export class DatabaseService {
   exec(sql: string) {
     return this.db.exec(sql);
   }
-
+  
   // Project methods
   getProjects(): Project[] {
     const stmt = this.db.prepare('SELECT * FROM projects ORDER BY created_at DESC');
@@ -601,7 +601,40 @@ export class DatabaseService {
       stmt.run(user.id, user.firstname, user.lastname, user.email, user.passwordhash, user.dob);
   }
 
-    // Function to delete a user by email
+  async updateUserProfile(userId: string, data: {
+    firstname: string;
+    lastname: string;
+    email: string;
+    dob: string;
+  }): Promise<void> {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE users
+        SET firstname = ?, lastname = ?, email = ?, dob = ?
+        WHERE id = ?
+      `);
+      stmt.run(data.firstname, data.lastname, data.email, data.dob, userId);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  }
+
+  async updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE users
+        SET passwordhash = ?
+        WHERE id = ?
+      `);
+      stmt.run(passwordHash, userId);
+    } catch (error) {
+      console.error('Error updating user password:', error);
+      throw error;
+    }
+  }
+
+  // Function to delete a user by email
   async deleteUserByEmail(email: string): Promise<void> {
     try {
       const stmt = await this.db.prepare(`
@@ -645,13 +678,12 @@ export class DatabaseService {
       console.error('Error in getUserById:', error);
       throw error;
     }
-  }  
+  }
+
   async deleteUserById(userId: string): Promise<void> {
     await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
   }
     
-  //From here on, we are adding the role and permission management functions
-
   //Function to create new role
   async createRole(role: { id: string; name: string; description?: string }): Promise<void> {
     const stmt = this.prepareStatement(`
@@ -661,28 +693,48 @@ export class DatabaseService {
   }
 
   //Functino to get role by role name
-  async getRoleByName(roleName: string): Promise<{ id: string } | undefined> {
-    const stmt = this.prepareStatement(`SELECT id FROM roles WHERE name = ?`);
-    return stmt.get(roleName) as { id: string } | undefined;
+  async getRoleByName(roleName: string): Promise<{ id: string, name: string } | null> {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT id, name FROM roles
+        WHERE name = ?
+      `);
+      return stmt.get(roleName) as { id: string, name: string } | null;
+    } catch (error) {
+      console.error('Error in getRoleByName:', error);
+      throw error;
+    }
   }
 
   //Function to assign role to user
   async assignRoleToUser(userId: string, roleId: string): Promise<void> {
-      const stmt = this.prepareStatement(`
-          INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO user_roles (user_id, role_id)
+        VALUES (?, ?)
       `);
-      await stmt.run(userId, roleId);
+      stmt.run(userId, roleId);
+    } catch (error) {
+      console.error('Error in assignRoleToUser:', error);
+      throw error;
+    }
   }
 
   //Function to get user role by user.id
   async getUserRoles(userId: string): Promise<string[]> {
-    const stmt = this.prepareStatement(`
-        SELECT r.name FROM user_roles ur
-        JOIN roles r ON ur.role_id = r.id
+    try {
+      const stmt = this.db.prepare(`
+        SELECT r.name
+        FROM roles r
+        JOIN user_roles ur ON r.id = ur.role_id
         WHERE ur.user_id = ?
-    `);
-    const result = await stmt.all(userId) as any[];
-    return result.map(row => row.name);
+      `);
+      const roles = stmt.all(userId) as { name: string }[];
+      return roles.map(role => role.name);
+    } catch (error) {
+      console.error('Error in getUserRoles:', error);
+      throw error;
+    }
   }
 
   //Function to get users by roles
@@ -699,17 +751,20 @@ export class DatabaseService {
 
   //Function to achieve user permissions
   async getUserPermissions(userId: string): Promise<string[]> {
-      const stmt = this.prepareStatement(`
-          SELECT p.name 
-          FROM users u
-          JOIN user_roles ur ON u.id = ur.user_id
-          JOIN roles r ON ur.role_id = r.id
-          JOIN role_permissions rp ON r.id = rp.role_id
-          JOIN permissions p ON rp.permission_id = p.id
-          WHERE u.id = ?
+    try {
+      const stmt = this.db.prepare(`
+        SELECT DISTINCT p.name
+        FROM permissions p
+        JOIN role_permissions rp ON p.id = rp.permission_id
+        JOIN user_roles ur ON rp.role_id = ur.role_id
+        WHERE ur.user_id = ?
       `);
-      const result = await stmt.all(userId);
-      return result.map((row: any) => row.name);
+      const permissions = stmt.all(userId) as { name: string }[];
+      return permissions.map(permission => permission.name);
+    } catch (error) {
+      console.error('Error in getUserPermissions:', error);
+      throw error;
+    }
   }
 
   //Function to achieve role permissions
@@ -789,7 +844,8 @@ export class DatabaseService {
 
   async getStudentsInClassroom(classroomId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
-          SELECT u.* FROM users u
+          SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
+          FROM users u
           JOIN classroom_students cs ON u.id = cs.user_id
           WHERE cs.classroom_id = ?
       `);
@@ -804,7 +860,6 @@ export class DatabaseService {
   }
 
   async getStudentClasses(userId: string): Promise<any[]> {
-
     const stmt = this.prepareStatement(`
       SELECT c.id, c.name
       FROM classrooms c
@@ -814,6 +869,73 @@ export class DatabaseService {
     return stmt.all(userId);
   }
   
+  async verifyTeacherClassroomAccess(classroomId: string, teacherId: string): Promise<boolean> {
+    const stmt = this.prepareStatement(`
+      SELECT COUNT(*) as count FROM classroom_teachers 
+      WHERE classroom_id = ? AND user_id = ?
+    `);
+    const result = stmt.get(classroomId, teacherId);
+    return result.count > 0;
+  }
+
+  async deleteClassroom(id: string): Promise<void> {
+    // Start transaction to ensure all related records are deleted
+    const transaction = this.db.transaction(() => {
+      // Delete classroom-student relationships
+      this.prepareStatement(`DELETE FROM classroom_students WHERE classroom_id = ?`).run(id);
+      
+      // Delete classroom-teacher relationships
+      this.prepareStatement(`DELETE FROM classroom_teachers WHERE classroom_id = ?`).run(id);
+      
+      // Delete materials associated with classroom (if applicable)
+      this.prepareStatement(`DELETE FROM materials WHERE classroom_id = ?`).run(id);
+      
+      // Finally delete the classroom itself
+      this.prepareStatement(`DELETE FROM classrooms WHERE id = ?`).run(id);
+    });
+    
+    transaction();
+  }
+  
+  async updateClassroom(id: string, name: string, description?: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE classrooms SET name = ?, description = ? WHERE id = ?
+    `);
+    await stmt.run(name, description, id);
+  }
+
+  async removeStudentFromClassroom(classroomId: string, userId: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      DELETE FROM classroom_students 
+      WHERE classroom_id = ? AND user_id = ?
+    `);
+    await stmt.run(classroomId, userId);
+  }
+
+  async getEnrolledStudents(classroomId: string): Promise<any[]> {
+    const stmt = this.prepareStatement(`
+      SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
+      FROM users u
+      JOIN classroom_students cs ON u.id = cs.user_id
+      WHERE cs.classroom_id = ?
+    `);
+    return stmt.all(classroomId);
+  }
+
+  async getAvailableStudentsForClassroom(classroomId: string): Promise<any[]> {
+    const stmt = this.prepareStatement(`
+      SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
+      FROM users u
+      JOIN user_roles ur ON u.id = ur.user_id
+      JOIN roles r ON ur.role_id = r.id
+      WHERE r.name = 'student'
+      AND u.id NOT IN (
+        SELECT user_id FROM classroom_students 
+        WHERE classroom_id = ?
+      )
+    `);
+    return stmt.all(classroomId);
+  }
   
   close() {
     this.db.close();

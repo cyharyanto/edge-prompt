@@ -134,3 +134,6 @@ CREATE INDEX IF NOT EXISTS idx_materials_project ON materials(project_id);
 CREATE INDEX IF NOT EXISTS idx_questions_material ON generated_questions(material_id);
 CREATE INDEX IF NOT EXISTS idx_responses_question ON responses(question_id);
 CREATE INDEX IF NOT EXISTS idx_materials_status ON materials(status); 
+CREATE INDEX IF NOT EXISTS idx_classroom_teachers ON classroom_teachers(classroom_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_classroom_students ON classroom_students(classroom_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles ON user_roles(user_id, role_id);

@@ -109,11 +109,6 @@ class ApiClient {
     });
   }
   
-  // Project endpoints
-  async getProjects() {
-    return this.request<Project[]>('/projects');
-  }
-
   // Class endpoints
   // Get all classes for a teacher
   async getClasses() {
@@ -134,26 +129,51 @@ class ApiClient {
   }
 
   // Delete a class
-  async deleteClass(id: string) {
-    return this.request(`/classes/${id}`, {
+  async deleteClass(classId: string) {
+    return this.request<{ message: string }>(`/classrooms/${classId}`, {
       method: 'DELETE',
     });
+  }
+
+  // Add these methods to the ApiClient class in api.ts
+  async getClassDetails(classId: string) {
+    return this.request<Class>(`/classrooms/${classId}`);
+  }
+  
+  async updateClassDetails(classId: string, data: Partial<Class>) {
+    return this.request<{ message: string }>(`/classrooms/${classId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+  
+  async getEnrolledStudents(classId: string) {
+    return this.request<{ id: string; name: string; email: string }[]>(
+      `/classrooms/${classId}/students`
+    );
+  }
+  
+  async getAvailableStudents(classId: string) {
+    return this.request<{ id: string; name: string; email: string }[]>(
+      `/classrooms/${classId}/students/available`
+    );
   }
 
   // Student Management Endpoints for Class
   // Add a student to a class
   async addStudentToClass(classId: string, studentId: string) {
-    return this.request<{ message: string }>(`/classes/${classId}/students`, {
-      method: 'POST',
-      body: JSON.stringify({ studentId }),
-    });
+    return this.request<{ message: string }>(
+      `/classrooms/${classId}/students/${studentId}`,
+      { method: 'POST' }
+    );
   }
 
   // Remove a student from a class
   async removeStudentFromClass(classId: string, studentId: string) {
-    return this.request<{ message: string }>(`/classes/${classId}/students/${studentId}`, {
-      method: 'DELETE',
-    });
+    return this.request<{ message: string }>(
+      `/classrooms/${classId}/students/${studentId}`,
+      { method: 'DELETE' }
+    );
   }
 
   // Get all students (for selecting students to add to class)
@@ -176,7 +196,12 @@ class ApiClient {
     return this.request<{ id: string; name: string; email: string }[]>(
       `/classes/${classId}/students/available`
     );
-  }  
+  }
+  
+  // Project endpoints
+  async getProjects() {
+    return this.request<Project[]>('/projects');
+  }
 
   async createProject(project: Omit<Project, 'id' | 'createdAt'>) {
     return this.request<Project>('/projects', {

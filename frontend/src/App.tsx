@@ -16,6 +16,7 @@ import Dashboard from "./pages/dashboard";
 import StudentDashboard from "./pages/studentDashboard";
 import TeacherDashboard from "./pages/teacher/teacherDashboard";
 import CreateClass from "./pages/teacher/createClass";
+import ManageClass from "./pages/teacher/manageClass";
 import ClassPage from "./pages/StudentClassPage";
 
 const App: React.FC = () => {
@@ -39,6 +40,7 @@ const App: React.FC = () => {
             {/* Teacher dashboard */}
             <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
             <Route path="/dashboard/teacher/create-class" element={<CreateClass />} />
+            <Route path="/dashboard/teacher/manage-class/:classId" element={<ManageClass />} />
 
             {/* Fallback route - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

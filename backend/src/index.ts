@@ -28,8 +28,6 @@ app.use(cors());
 app.use(express.json());
 
 // Create uploads directory if it doesn't exist
-
-
 const uploadsDir = join(dirname(__dirname), 'uploads');
 console.log("uploadsDir is: " + uploadsDir)
 mkdirSync(uploadsDir, { recursive: true });
@@ -249,7 +247,7 @@ classroomRouter.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-
+// Get all classrooms
 classroomRouter.get('/:id', authMiddleware, async (req, res) => {
   try {
       const classroom = await db.getClassroom(req.params.id);
@@ -263,6 +261,7 @@ classroomRouter.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Get all classrooms for a teacher
 classroomRouter.get('/users/:userId', authMiddleware, async (req, res) => {
   try {
       const classrooms = await db.getClassroomsForTeacher(req.params.userId);
@@ -272,6 +271,7 @@ classroomRouter.get('/users/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+// Get classes for student
 classroomRouter.get('/users/:user_id/classes', authMiddleware, async (req, res) => {
   try {
     const db = new DatabaseService();
@@ -282,7 +282,7 @@ classroomRouter.get('/users/:user_id/classes', authMiddleware, async (req, res) 
   }
 });
 
-
+// Add teacher to classroom
 classroomRouter.post('/:classroom_id/teachers/:user_id', authMiddleware, async (req, res) => {
   try {
       await db.addTeacherToClassroom(req.params.classroom_id, req.params.user_id);
@@ -292,6 +292,7 @@ classroomRouter.post('/:classroom_id/teachers/:user_id', authMiddleware, async (
   }
 });
 
+// Add student to classroom
 classroomRouter.post('/:classroom_id/students/:user_id', authMiddleware, async (req, res) => {
   try {
       await db.addStudentToClassroom(req.params.classroom_id, req.params.user_id);
@@ -301,6 +302,7 @@ classroomRouter.post('/:classroom_id/students/:user_id', authMiddleware, async (
   }
 });
 
+// Get students in classroom
 classroomRouter.get('/:classroom_id/students', authMiddleware, async (req, res) => {
   try {
       const students = await db.getStudentsInClassroom(req.params.classroom_id);
@@ -320,6 +322,63 @@ classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res)
 });
 
 app.use('/api/classrooms', classroomRouter); // Mount the classroom router
+
+// Update classroom details
+classroomRouter.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    const teacherId = req.user?.userId;
+    
+    // Verify teacher has access to this classroom
+    const hasAccess = await db.verifyTeacherClassroomAccess(req.params.id, teacherId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access to classroom' });
+    }
+    
+    await db.updateClassroom(req.params.id, name, description);
+    res.status(200).json({ message: 'Classroom updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update classroom', details: error.message });
+  }
+});
+
+// Delete classroom
+classroomRouter.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const teacherId = req.user?.userId;
+    
+    // Verify teacher has access to this classroom
+    const hasAccess = await db.verifyTeacherClassroomAccess(req.params.id, teacherId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access to classroom' });
+    }
+    
+    await db.deleteClassroom(req.params.id);
+    res.status(200).json({ message: 'Classroom deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete classroom', details: error.message });
+  }
+});
+
+// Remove student from classroom
+classroomRouter.delete('/:classroom_id/students/:user_id', authMiddleware, async (req, res) => {
+  try {
+    await db.removeStudentFromClassroom(req.params.classroom_id, req.params.user_id);
+    res.status(200).json({ message: 'Student removed from classroom' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove student from classroom', details: error.message });
+  }
+});
+
+// Get available students for classroom
+classroomRouter.get('/:classroom_id/students/available', authMiddleware, async (req, res) => {
+  try {
+    const students = await db.getAvailableStudentsForClassroom(req.params.classroom_id);
+    res.json(students);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get available students', details: error.message });
+  }
+});
 
 app.get('/api/health', async (_req, res): Promise<void> => {
   try {

@@ -767,7 +767,8 @@ export class DatabaseService {
 
   async getStudentsInClassroom(classroomId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
-          SELECT u.* FROM users u
+          SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
+          FROM users u
           JOIN classroom_students cs ON u.id = cs.user_id
           WHERE cs.classroom_id = ?
       `);
@@ -782,7 +783,6 @@ export class DatabaseService {
   }
 
   async getStudentClasses(userId: string): Promise<any[]> {
-
     const stmt = this.prepareStatement(`
       SELECT c.id, c.name
       FROM classrooms c
@@ -792,6 +792,73 @@ export class DatabaseService {
     return stmt.all(userId);
   }
   
+  async verifyTeacherClassroomAccess(classroomId: string, teacherId: string): Promise<boolean> {
+    const stmt = this.prepareStatement(`
+      SELECT COUNT(*) as count FROM classroom_teachers 
+      WHERE classroom_id = ? AND user_id = ?
+    `);
+    const result = stmt.get(classroomId, teacherId);
+    return result.count > 0;
+  }
+
+  async deleteClassroom(id: string): Promise<void> {
+    // Start transaction to ensure all related records are deleted
+    const transaction = this.db.transaction(() => {
+      // Delete classroom-student relationships
+      this.prepareStatement(`DELETE FROM classroom_students WHERE classroom_id = ?`).run(id);
+      
+      // Delete classroom-teacher relationships
+      this.prepareStatement(`DELETE FROM classroom_teachers WHERE classroom_id = ?`).run(id);
+      
+      // Delete materials associated with classroom (if applicable)
+      this.prepareStatement(`DELETE FROM materials WHERE classroom_id = ?`).run(id);
+      
+      // Finally delete the classroom itself
+      this.prepareStatement(`DELETE FROM classrooms WHERE id = ?`).run(id);
+    });
+    
+    transaction();
+  }
+  
+  async updateClassroom(id: string, name: string, description?: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE classrooms SET name = ?, description = ? WHERE id = ?
+    `);
+    await stmt.run(name, description, id);
+  }
+
+  async removeStudentFromClassroom(classroomId: string, userId: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      DELETE FROM classroom_students 
+      WHERE classroom_id = ? AND user_id = ?
+    `);
+    await stmt.run(classroomId, userId);
+  }
+
+  async getEnrolledStudents(classroomId: string): Promise<any[]> {
+    const stmt = this.prepareStatement(`
+      SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
+      FROM users u
+      JOIN classroom_students cs ON u.id = cs.user_id
+      WHERE cs.classroom_id = ?
+    `);
+    return stmt.all(classroomId);
+  }
+
+  async getAvailableStudentsForClassroom(classroomId: string): Promise<any[]> {
+    const stmt = this.prepareStatement(`
+      SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
+      FROM users u
+      JOIN user_roles ur ON u.id = ur.user_id
+      JOIN roles r ON ur.role_id = r.id
+      WHERE r.name = 'student'
+      AND u.id NOT IN (
+        SELECT user_id FROM classroom_students 
+        WHERE classroom_id = ?
+      )
+    `);
+    return stmt.all(classroomId);
+  }
   
   close() {
     this.db.close();

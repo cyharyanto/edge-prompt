@@ -140,6 +140,16 @@ class ApiClient {
     });
   }
 
+  // Get classes by ID
+  async getClassById(classId: string) {
+    return this.request<{
+      classId: string;
+      className: string;
+      subjectName?: string;
+      learningMaterials: { id: string; title: string }[];
+    }>(`/class/${classId}`);
+  }
+
   // Student Management Endpoints for Class
   // Add a student to a class
   async addStudentToClass(classId: string, studentId: string) {
